@@ -322,6 +322,121 @@
         .mode-btn:hover { border-color: var(--primary); color: var(--text-primary); }
         .mode-btn.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
 
+        /* Space Toggle */
+        .space-toggle {
+            display: flex;
+            align-items: center;
+            gap: 2px;
+            background: var(--bg-base);
+            padding: 2px;
+            border-radius: var(--radius-sm);
+        }
+
+        .space-btn {
+            padding: 2px 8px;
+            font-size: 11px;
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            cursor: pointer;
+            background: var(--bg-base);
+            color: var(--text-tertiary);
+            white-space: nowrap;
+        }
+
+        .space-btn:hover { border-color: var(--primary); color: var(--text-primary); }
+        .space-btn.active { border-color: var(--primary); background: var(--primary); color: white; }
+
+        .space-add {
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px dashed var(--border);
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 14px;
+            color: var(--text-tertiary);
+        }
+
+        .space-add:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* Space Dropdown */
+        .space-dropdown {
+            display: none;
+            position: absolute;
+            bottom: 32px;
+            right: 0;
+            background: var(--bg-base);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            min-width: 180px;
+            z-index: 100;
+        }
+
+        .space-dropdown.visible {
+            display: block;
+        }
+
+        .space-dropdown-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-2) var(--space-3);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .space-dropdown-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .space-dropdown-item:hover { background: var(--primary-light); }
+        .space-dropdown-item.active { background: var(--primary); color: white; }
+
+        .space-dropdown-item .space-icon {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 2px;
+            font-size: 10px;
+        }
+
+        .space-dropdown-item .space-name {
+            flex: 1;
+        }
+
+        .space-dropdown-item .space-delete {
+            opacity: 0;
+            cursor: pointer;
+            color: var(--text-tertiary);
+        }
+
+        .space-dropdown-item:hover .space-delete {
+            opacity: 1;
+        }
+
+        .space-dropdown-item .space-delete:hover {
+            color: var(--error);
+        }
+
+        .space-dropdown-footer {
+            padding: var(--space-2) var(--space-3);
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-tertiary);
+        }
+
         /* Cascade Panel Mode */
         .cascade-container {
             display: none;
@@ -1211,9 +1326,39 @@
                         </div>
                     </div>
                     <span style="color: var(--border);">|</span>
-                    <span>8 个项目</span>
+                    <!-- Space 切换 -->
+                    <div class="space-toggle" id="spaceToggle">
+                        <div class="space-btn active" data-space="work" onclick="switchSpace('work')">Work</div>
+                        <div class="space-btn" data-space="dev" onclick="switchSpace('dev')">Dev</div>
+                        <div class="space-btn" data-space="game" onclick="switchSpace('game')">Game</div>
+                        <div class="space-add" onclick="showSpaceDropdown()" title="管理空间">+</div>
+                    </div>
+                    <!-- Space 下拉菜单 -->
+                    <div class="space-dropdown" id="spaceDropdown">
+                        <div class="space-dropdown-header">
+                            <span>空间管理</span>
+                            <span style="cursor: pointer;" onclick="hideSpaceDropdown()">×</span>
+                        </div>
+                        <div class="space-dropdown-item active" data-space="work" onclick="switchSpace('work')">
+                            <span class="space-icon" style="background: var(--primary); color: white;">W</span>
+                            <span class="space-name">Work</span>
+                            <span class="space-delete" onclick="deleteSpace('work', event)">×</span>
+                        </div>
+                        <div class="space-dropdown-item" data-space="dev" onclick="switchSpace('dev')">
+                            <span class="space-icon" style="background: var(--success); color: white;">D</span>
+                            <span class="space-name">Dev</span>
+                            <span class="space-delete" onclick="deleteSpace('dev', event)">×</span>
+                        </div>
+                        <div class="space-dropdown-item" data-space="game" onclick="switchSpace('game')">
+                            <span class="space-icon" style="background: var(--warning); color: white;">G</span>
+                            <span class="space-name">Game</span>
+                            <span class="space-delete" onclick="deleteSpace('game', event)">×</span>
+                        </div>
+                        <div class="space-dropdown-footer">
+                            <span style="cursor: pointer; color: var(--primary);" onclick="createSpace()">+ 新建空间</span>
+                        </div>
+                    </div>
                     <span style="color: var(--border);">|</span>
-                    <span>1 个选中</span>
                 </div>
             </div>
         </div>
@@ -1582,6 +1727,116 @@ pub fn init() {
             document.getElementById('statusbarInfo').textContent = 
                 `${visiblePanels.length} 个面板 · ${selected.length} 个选中`;
         }
+
+        // Space 管理
+        let currentSpace = 'work';
+        let spaces = {
+            work: { name: 'Work', color: 'var(--primary)', layout: 1, panels: [] },
+            dev: { name: 'Dev', color: 'var(--success)', layout: 2, panels: [] },
+            game: { name: 'Game', color: 'var(--warning)', layout: 1, panels: [] }
+        };
+
+        function switchSpace(spaceId) {
+            if (!spaces[spaceId]) return;
+            
+            // 更新当前空间
+            currentSpace = spaceId;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.space-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.space === spaceId) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // 更新下拉菜单状态
+            document.querySelectorAll('.space-dropdown-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.space === spaceId) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // 应用空间配置（这里可以扩展为保存/恢复面板状态）
+            const space = spaces[spaceId];
+            console.log('Switch to space:', spaceId, space);
+            
+            // 隐藏下拉菜单
+            hideSpaceDropdown();
+        }
+
+        function showSpaceDropdown() {
+            document.getElementById('spaceDropdown').classList.add('visible');
+        }
+
+        function hideSpaceDropdown() {
+            document.getElementById('spaceDropdown').classList.remove('visible');
+        }
+
+        function createSpace() {
+            const name = prompt('请输入空间名称:');
+            if (!name) return;
+            
+            const id = name.toLowerCase().replace(/\s+/g, '-');
+            const colors = ['var(--primary)', 'var(--success)', 'var(--warning)', 'var(--error)', '#8B5CF6', '#EC4899'];
+            const color = colors[Object.keys(spaces).length % colors.length];
+            
+            spaces[id] = { name, color, layout: 1, panels: [] };
+            
+            // 更新UI
+            updateSpaceUI();
+            
+            // 切换到新空间
+            switchSpace(id);
+        }
+
+        function deleteSpace(spaceId, event) {
+            event.stopPropagation();
+            
+            if (Object.keys(spaces).length <= 1) {
+                alert('至少保留一个空间');
+                return;
+            }
+            
+            if (confirm(`确定要删除空间 "${spaces[spaceId].name}" 吗？`)) {
+                delete spaces[spaceId];
+                
+                // 如果删除的是当前空间，切换到第一个空间
+                if (currentSpace === spaceId) {
+                    switchSpace(Object.keys(spaces)[0]);
+                }
+                
+                // 更新UI
+                updateSpaceUI();
+            }
+        }
+
+        function updateSpaceUI() {
+            // 更新切换按钮
+            const toggle = document.getElementById('spaceToggle');
+            toggle.innerHTML = Object.entries(spaces).map(([id, space]) => 
+                `<div class="space-btn${id === currentSpace ? ' active' : ''}" data-space="${id}" onclick="switchSpace('${id}')">${space.name}</div>`
+            ).join('') + '<div class="space-add" onclick="showSpaceDropdown()" title="管理空间">+</div>';
+            
+            // 更新下拉菜单
+            const dropdown = document.getElementById('spaceDropdown');
+            const itemsContainer = dropdown.querySelector('.space-dropdown-footer').previousElementSibling;
+            itemsContainer.outerHTML = Object.entries(spaces).map(([id, space]) => 
+                `<div class="space-dropdown-item${id === currentSpace ? ' active' : ''}" data-space="${id}" onclick="switchSpace('${id}')">
+                    <span class="space-icon" style="background: ${space.color}; color: white;">${space.name.charAt(0)}</span>
+                    <span class="space-name">${space.name}</span>
+                    <span class="space-delete" onclick="deleteSpace('${id}', event)">×</span>
+                </div>`
+            ).join('');
+        }
+
+        // 点击外部关闭下拉菜单
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#spaceToggle') && !e.target.closest('#spaceDropdown')) {
+                hideSpaceDropdown();
+            }
+        });
 
         // 侧边栏切换
         function toggleSidebar() {
