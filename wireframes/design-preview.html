@@ -220,10 +220,51 @@
             overflow-y: auto;
             overflow-x: hidden;
             transition: opacity 0.2s ease;
+            position: relative;
         }
 
         .full-layout:not(.sidebar-visible) .layout-sidebar { opacity: 0; pointer-events: none; }
         .full-layout.sidebar-visible .layout-sidebar { opacity: 1; pointer-events: auto; }
+
+        /* Sidebar Resize Handle */
+        .sidebar-resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            cursor: col-resize;
+            background: transparent;
+            transition: background 0.15s ease;
+            z-index: 10;
+        }
+
+        .sidebar-resize-handle:hover,
+        .sidebar-resize-handle.active {
+            background: var(--primary);
+        }
+
+        .sidebar-resize-tooltip {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--text-primary);
+            color: var(--bg-base);
+            padding: 2px 8px;
+            border-radius: var(--radius-sm);
+            font-size: 11px;
+            font-family: 'Cascadia Code', monospace;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+
+        .sidebar-resize-handle:hover .sidebar-resize-tooltip,
+        .sidebar-resize-handle.active .sidebar-resize-tooltip {
+            opacity: 1;
+        }
 
         .layout-main { 
             display: grid; 
@@ -1071,6 +1112,9 @@
                         <div class="sidebar-item" data-space="work" onclick="switchSpace('work')">💼 Work</div>
                         <div class="sidebar-item" data-space="dev" onclick="switchSpace('dev')">💻 Dev</div>
                         <div class="sidebar-item" style="color: var(--primary);" onclick="createSpace()">+ 新建空间</div>
+                    </div>
+                    <div class="sidebar-resize-handle" id="sidebarResizeHandle">
+                        <div class="sidebar-resize-tooltip" id="sidebarResizeTooltip">200px</div>
                     </div>
                 </div>
             </div>
@@ -2371,6 +2415,62 @@ pub fn init() {
                 closeAllAddressDropdowns();
             }
         });
+
+        // 侧边栏拖拽调整宽度
+        (function() {
+            const handle = document.getElementById('sidebarResizeHandle');
+            const tooltip = document.getElementById('sidebarResizeTooltip');
+            const sidebar = document.querySelector('.layout-sidebar');
+            const root = document.documentElement;
+            
+            let isDragging = false;
+            let startX = 0;
+            let startWidth = 0;
+            
+            const MIN_WIDTH = 150;
+            const MAX_WIDTH = 400;
+            const DEFAULT_WIDTH = 200;
+            
+            function updateTooltip(width) {
+                tooltip.textContent = Math.round(width) + 'px';
+            }
+            
+            handle.addEventListener('mousedown', function(e) {
+                isDragging = true;
+                startX = e.clientX;
+                startWidth = sidebar.offsetWidth;
+                handle.classList.add('active');
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                e.preventDefault();
+            });
+            
+            handle.addEventListener('dblclick', function() {
+                root.style.setProperty('--sidebar-width', DEFAULT_WIDTH + 'px');
+                updateTooltip(DEFAULT_WIDTH);
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                
+                const deltaX = e.clientX - startX;
+                let newWidth = startWidth + deltaX;
+                
+                newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
+                
+                root.style.setProperty('--sidebar-width', newWidth + 'px');
+                updateTooltip(newWidth);
+            });
+            
+            document.addEventListener('mouseup', function() {
+                if (isDragging) {
+                    isDragging = false;
+                    handle.classList.remove('active');
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                }
+            });
+        })();
 
         // 初始化预览内容
         updatePreview('main.rs');
