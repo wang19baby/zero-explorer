@@ -797,11 +797,11 @@
             <div class="layout-sidebar">
                 <div class="sidebar">
                     <div class="sidebar-section">
-                        <div class="sidebar-title">快速访问</div>
-                        <div class="sidebar-item active">📁 桌面</div>
-                        <div class="sidebar-item">📁 下载</div>
-                        <div class="sidebar-item">📁 文档</div>
-                        <div class="sidebar-item">📁 图片</div>
+                        <div class="sidebar-title">常用文件夹</div>
+                        <div class="sidebar-item">📁 D:\work_space <span style="margin-left: auto; font-size: 10px; color: var(--text-tertiary);">×</span></div>
+                        <div class="sidebar-item">📁 E:\backup <span style="margin-left: auto; font-size: 10px; color: var(--text-tertiary);">×</span></div>
+                        <div class="sidebar-item">📁 D:\projects <span style="margin-left: auto; font-size: 10px; color: var(--text-tertiary);">×</span></div>
+                        <div class="sidebar-item add-folder" onclick="addFavoriteFolder()">+ 添加文件夹</div>
                     </div>
                     <div class="sidebar-section">
                         <div class="sidebar-title">此电脑</div>
@@ -828,11 +828,11 @@
                         </div>
                     </div>
                     <div class="sidebar-section">
-                        <div class="sidebar-title">标签/书签</div>
-                        <div class="sidebar-item">🏷️ 项目文件</div>
-                        <div class="sidebar-item">🏷️ 开发工具</div>
-                        <div class="sidebar-item">🏷️ 设计资源</div>
-                        <div class="sidebar-item" style="color: var(--text-tertiary); font-size: 12px;">+ 添加书签</div>
+                        <div class="sidebar-title">标签</div>
+                        <div class="sidebar-item">🏷️ 重要项目</div>
+                        <div class="sidebar-item">🏷️ 待处理</div>
+                        <div class="sidebar-item">🏷️ 归档</div>
+                        <div class="sidebar-item" style="color: var(--text-tertiary); font-size: 12px;">+ 添加标签</div>
                     </div>
                     <div class="sidebar-section">
                         <div class="sidebar-title">最近访问</div>
@@ -1138,9 +1138,10 @@
             <!-- Status Bar -->
             <div class="layout-statusbar">
                 <div class="statusbar-left">
-                    <span>就绪</span>
+                    <span id="statusbarInfo">4 个面板 · 1 个选中</span>
                     <span style="color: var(--border);">|</span>
-                    <span class="statusbar-path">D:\work_space\personal_workspace\zero-explorer</span>
+                    <span class="statusbar-path" id="statusbarPath" onclick="copyPath()" title="点击复制路径">D:\work_space\personal_workspace\zero-explorer</span>
+                    <span id="copyToast" style="display: none; color: var(--success); font-size: 11px;">已复制!</span>
                 </div>
                 <div style="display: flex; align-items: center; gap: var(--space-3);">
                     <!-- 分栏布局切换 -->
@@ -1515,6 +1516,9 @@ pub fn init() {
                     });
                     break;
             }
+            
+            // 更新状态栏
+            updateStatusbar();
         }
 
         // 分栏模式切换
@@ -1553,6 +1557,37 @@ pub fn init() {
             
             // 这里可以添加展开下一级的逻辑
             console.log('Cascade click:', level, item.textContent);
+        }
+
+        // 复制路径到剪贴板
+        function copyPath() {
+            const pathEl = document.getElementById('statusbarPath');
+            const toast = document.getElementById('copyToast');
+            
+            navigator.clipboard.writeText(pathEl.textContent).then(() => {
+                toast.style.display = 'inline';
+                setTimeout(() => { toast.style.display = 'none'; }, 1500);
+            }).catch(() => {
+                // 降级方案
+                const textarea = document.createElement('textarea');
+                textarea.value = pathEl.textContent;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                toast.style.display = 'inline';
+                setTimeout(() => { toast.style.display = 'none'; }, 1500);
+            });
+        }
+
+        // 更新状态栏信息
+        function updateStatusbar() {
+            const panels = document.querySelectorAll('.wireframe-panel');
+            const visiblePanels = Array.from(panels).filter(p => p.style.display !== 'none');
+            const selected = document.querySelectorAll('.file-list-row.selected');
+            
+            document.getElementById('statusbarInfo').textContent = 
+                `${visiblePanels.length} 个面板 · ${selected.length} 个选中`;
         }
 
         // 侧边栏切换
@@ -1642,6 +1677,9 @@ pub fn init() {
             
             // 更新预览内容
             updatePreview(fileName);
+            
+            // 更新状态栏
+            updateStatusbar();
         }
 
         // 更新预览内容
