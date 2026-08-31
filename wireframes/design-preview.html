@@ -1273,6 +1273,8 @@
                     <!-- Space 切换 -->
                     <div class="space-toggle" id="spaceToggle">
                         <div class="space-btn active" data-space="default" onclick="switchSpace('default')">默认</div>
+                        <div class="space-btn" data-space="work" onclick="switchSpace('work')">Work</div>
+                        <div class="space-btn" data-space="dev" onclick="switchSpace('dev')">Dev</div>
                         <div class="space-add" onclick="showSpaceDropdown()" title="管理空间">+</div>
                     </div>
                     <!-- Space 下拉菜单 -->
@@ -1285,6 +1287,16 @@
                             <span class="space-icon" style="background: var(--primary); color: white;">默</span>
                             <span class="space-name">默认</span>
                             <span style="font-size: 10px; color: var(--text-tertiary);">默认</span>
+                        </div>
+                        <div class="space-dropdown-item" data-space="work" onclick="switchSpace('work')">
+                            <span class="space-icon" style="background: var(--success); color: white;">W</span>
+                            <span class="space-name">Work</span>
+                            <span class="space-delete" onclick="deleteSpace('work', event)">×</span>
+                        </div>
+                        <div class="space-dropdown-item" data-space="dev" onclick="switchSpace('dev')">
+                            <span class="space-icon" style="background: var(--warning); color: white;">D</span>
+                            <span class="space-name">Dev</span>
+                            <span class="space-delete" onclick="deleteSpace('dev', event)">×</span>
                         </div>
                         <div class="space-dropdown-footer">
                             <span style="cursor: pointer; color: var(--primary);" onclick="createSpace()">+ 新建空间</span>
@@ -1732,7 +1744,9 @@ pub fn init() {
         // Space 管理
         let currentSpace = 'default';
         let spaces = {
-            default: { name: '默认', color: 'var(--primary)', layout: 1, panels: [], isDefault: true }
+            default: { name: '默认', color: 'var(--primary)', layout: 1, panels: [], isDefault: true },
+            work: { name: 'Work', color: 'var(--success)', layout: 2, panels: [] },
+            dev: { name: 'Dev', color: 'var(--warning)', layout: 1, panels: [] }
         };
 
         function switchSpace(spaceId) {
