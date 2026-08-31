@@ -1,0 +1,22 @@
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Rust
+target/
+Cargo.lock
+
+# Logs
+*.log
+
+# Temp
+tmp/
+temp/

@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zero Explorer - 设计预览</title>
+    <style>
+        :root {
+            --primary: #0078D4;
+            --primary-hover: #106EBE;
+            --primary-active: #005A9E;
+            --primary-light: #E8F4FD;
+            --bg-base: #FFFFFF;
+            --bg-secondary: #F9F9F9;
+            --bg-tertiary: #F3F3F3;
+            --border: #E5E5E5;
+            --border-strong: #D1D1D1;
+            --text-primary: #1A1A1A;
+            --text-secondary: #616161;
+            --text-tertiary: #9E9E9E;
+            --success: #0F7B0F;
+            --warning: #9D5D00;
+            --error: #C42B1C;
+            --space-1: 4px;
+            --space-2: 8px;
+            --space-3: 12px;
+            --space-4: 16px;
+            --space-5: 20px;
+            --space-6: 24px;
+            --space-8: 32px;
+            --radius-sm: 4px;
+            --radius-md: 6px;
+            --radius-lg: 8px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 8px rgba(0,0,0,0.08);
+            --shadow-lg: 0 8px 16px rgba(0,0,0,0.12);
+            --sidebar-width: 200px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            color: var(--text-primary);
+            background: var(--bg-secondary);
+            padding: var(--space-6);
+        }
+
+        .section {
+            background: var(--bg-base);
+            border-radius: var(--radius-lg);
+            padding: var(--space-6);
+            margin-bottom: var(--space-6);
+            border: 1px solid var(--border);
+        }
+
+        .section-title {
+            font-family: 'Segoe UI Variable Display', 'Segoe UI', sans-serif;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: var(--space-4);
+        }
+
+        .section-subtitle {
+            font-size: 12px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--space-3);
+        }
+
+        .typography-grid { display: grid; gap: var(--space-4); }
+
+        .type-row {
+            display: flex;
+            align-items: baseline;
+            gap: var(--space-4);
+            padding: var(--space-3) 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .type-label { width: 120px; font-size: 12px; color: var(--text-tertiary); flex-shrink: 0; }
+        .type-display { font-family: 'Segoe UI Variable Display', sans-serif; font-size: 28px; font-weight: 600; }
+        .type-title { font-family: 'Segoe UI Variable Display', sans-serif; font-size: 20px; font-weight: 600; }
+        .type-body { font-family: 'Segoe UI Variable Text', sans-serif; font-size: 14px; }
+        .type-mono { font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 13px; background: var(--bg-tertiary); padding: 2px 6px; border-radius: var(--radius-sm); }
+
+        .color-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-3); }
+        .color-swatch { border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border); }
+        .color-preview { height: 64px; }
+        .color-info { padding: var(--space-2); background: var(--bg-base); }
+        .color-name { font-size: 12px; font-weight: 500; margin-bottom: 2px; }
+        .color-value { font-family: 'Cascadia Code', monospace; font-size: 11px; color: var(--text-tertiary); }
+
+        .button-row { display: flex; gap: var(--space-3); align-items: center; margin-bottom: var(--space-3); }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-4);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.1s ease;
+            border: 1px solid transparent;
+            height: 32px;
+        }
+
+        .btn-primary { background: var(--primary); color: white; border-color: var(--primary); }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-secondary { background: var(--bg-base); color: var(--text-primary); border-color: var(--border-strong); }
+        .btn-secondary:hover { background: var(--bg-tertiary); }
+        .btn-ghost { background: transparent; color: var(--text-primary); border-color: transparent; }
+        .btn-ghost:hover { background: var(--bg-tertiary); }
+        .btn-icon { width: 32px; padding: 0; }
+
+        .input-group { display: flex; gap: var(--space-3); margin-bottom: var(--space-3); }
+
+        .input {
+            height: 32px;
+            padding: 0 var(--space-3);
+            border: 1px solid var(--border-strong);
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.1s;
+        }
+
+        .input:focus { border-color: var(--primary); box-shadow: 0 0 0 1px var(--primary); }
+        .input-address { flex: 1; font-family: 'Cascadia Code', monospace; font-size: 13px; }
+
+        .shortcut-hint {
+            display: inline-flex;
+            align-items: center;
+            padding: 2px 6px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'Cascadia Code', monospace;
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .tabs { display: flex; gap: 2px; background: var(--bg-tertiary); padding: 2px; border-radius: var(--radius-md); margin-bottom: var(--space-4); }
+
+        .tab {
+            padding: var(--space-2) var(--space-3);
+            font-size: 13px;
+            font-weight: 500;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text-secondary);
+            transition: all 0.1s;
+        }
+
+        .tab:hover { color: var(--text-primary); background: var(--bg-base); }
+        .tab.active { color: var(--text-primary); background: var(--bg-base); box-shadow: var(--shadow-sm); }
+
+        /* File List */
+        .file-list { border: 1px solid var(--border); border-radius: var(--radius-md); overflow: hidden; }
+
+        .file-list-header {
+            display: grid;
+            grid-template-columns: 32px 1fr 120px 80px 140px;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .file-list-row {
+            display: grid;
+            grid-template-columns: 32px 1fr 120px 80px 140px;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .file-list-row:last-child { border-bottom: none; }
+        .file-list-row:hover { background: var(--primary-light); }
+        .file-list-row.selected { background: var(--primary); color: white; }
+
+        .file-icon { width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+        .file-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-type { font-size: 12px; color: var(--text-secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .file-size { font-family: 'Cascadia Code', monospace; font-size: 12px; color: var(--text-secondary); text-align: right; }
+        .file-date { font-size: 12px; color: var(--text-secondary); }
+
+        /* Full Layout */
+        .full-layout {
+            display: grid;
+            grid-template-columns: 0px 1fr;
+            grid-template-rows: 1fr auto;
+            height: 600px;
+            background: var(--bg-base);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: visible;
+            transition: grid-template-columns 0.2s ease;
+        }
+
+        .full-layout.sidebar-visible { grid-template-columns: var(--sidebar-width) 1fr; }
+
+        .layout-sidebar {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            overflow-y: auto;
+            overflow-x: hidden;
+            transition: opacity 0.2s ease;
+        }
+
+        .full-layout:not(.sidebar-visible) .layout-sidebar { opacity: 0; pointer-events: none; }
+        .full-layout.sidebar-visible .layout-sidebar { opacity: 1; pointer-events: auto; }
+
+        .layout-main { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            grid-template-rows: 1fr 1fr;
+            gap: 1px; 
+            background: var(--border); 
+            min-height: 0;
+        }
+
+        .layout-main.layout-1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+        .layout-main.layout-2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
+        .layout-main.layout-3 { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr; }
+        .layout-main.layout-4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+        .layout-main.layout-5 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+        .layout-main.layout-6 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+        .layout-main.layout-7 { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+
+        .layout-statusbar {
+            grid-column: 1 / -1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-1) var(--space-3);
+            background: var(--bg-tertiary);
+            border-top: 1px solid var(--border);
+            font-size: 11px;
+            color: var(--text-tertiary);
+        }
+
+        .sidebar { width: var(--sidebar-width); padding: var(--space-3); }
+        .sidebar-section { margin-bottom: var(--space-4); }
+        .sidebar-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-tertiary); margin-bottom: var(--space-2); }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-1) var(--space-2);
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+
+        .sidebar-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
+        .sidebar-item.active { background: var(--primary-light); color: var(--primary); }
+
+        /* Panel - 面包屑在 Tab 上方 */
+        .wireframe-panel { background: var(--bg-base); display: flex; flex-direction: column; }
+
+        .panel-breadcrumb {
+            display: flex;
+            align-items: center;
+            padding: var(--space-2) var(--space-3);
+            background: var(--bg-base);
+            border-bottom: 1px solid var(--border);
+            min-height: 36px;
+            gap: var(--space-2);
+        }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: var(--space-1);
+            font-size: 13px;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .breadcrumb-item { color: var(--text-secondary); cursor: pointer; white-space: nowrap; }
+        .breadcrumb-item:hover { color: var(--primary); }
+        .breadcrumb-item.current { color: var(--text-primary); font-weight: 500; }
+        .breadcrumb-sep { color: var(--text-tertiary); }
+
+        .breadcrumb-input {
+            flex: 1;
+            font-family: 'Cascadia Code', monospace;
+            font-size: 13px;
+            border: 1px solid var(--primary);
+            border-radius: var(--radius-sm);
+            padding: var(--space-1) var(--space-2);
+            outline: none;
+            display: none;
+        }
+
+        .panel-tabs {
+            display: flex;
+            gap: 1px;
+            background: var(--bg-tertiary);
+            padding: 2px 2px 0 2px;
+            cursor: pointer;
+        }
+
+        .panel-tab {
+            padding: var(--space-1) var(--space-3);
+            font-size: 12px;
+            background: var(--bg-base);
+            border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .panel-tab.active { background: var(--bg-base); box-shadow: 0 -1px 0 var(--primary); }
+
+        .panel-content { flex: 1; padding: var(--space-2); overflow-y: auto; }
+
+        .panel-statusbar {
+            display: flex;
+            justify-content: space-between;
+            padding: var(--space-1) var(--space-3);
+            background: var(--bg-tertiary);
+            font-size: 11px;
+            color: var(--text-tertiary);
+            border-top: 1px solid var(--border);
+        }
+
+        /* Preview Overlay */
+        .preview-overlay {
+            position: fixed;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 33.33vw;
+            background: var(--bg-base);
+            border-left: 1px solid var(--border);
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            display: none;
+            flex-direction: column;
+            transition: width 0.2s ease;
+        }
+
+        .preview-overlay.visible { display: flex; }
+        .preview-overlay.wide { width: 66.66vw; }
+
+        .preview-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-3) var(--space-4);
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-tertiary);
+        }
+
+        .preview-close {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 16px;
+            color: var(--text-secondary);
+        }
+
+        .preview-close:hover { background: var(--bg-base); }
+
+        .preview-size-toggle { display: flex; gap: 2px; background: var(--bg-base); border-radius: var(--radius-sm); padding: 2px; }
+
+        .preview-size-btn {
+            padding: var(--space-1) var(--space-2);
+            font-size: 12px;
+            border: none;
+            background: transparent;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        .preview-size-btn.active { background: var(--primary); color: white; }
+
+        .preview-content { flex: 1; overflow-y: auto; padding: var(--space-4); }
+
+        .preview-thumbnail {
+            width: 100%;
+            height: 200px;
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 64px;
+            margin-bottom: var(--space-4);
+            border: 1px solid var(--border);
+        }
+
+        .preview-info { margin-bottom: var(--space-4); }
+
+        .preview-row {
+            display: flex;
+            padding: var(--space-2) 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .preview-label { width: 100px; font-size: 13px; color: var(--text-tertiary); flex-shrink: 0; }
+        .preview-value { font-size: 13px; color: var(--text-primary); word-break: break-all; }
+        .preview-value.mono { font-family: 'Cascadia Code', monospace; font-size: 12px; }
+
+        .preview-code {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .preview-code-header {
+            padding: var(--space-2) var(--space-3);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-base);
+        }
+
+        .preview-code-content {
+            padding: var(--space-3);
+            font-family: 'Cascadia Code', monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            overflow-x: auto;
+            white-space: pre;
+            margin: 0;
+        }
+
+        .info-box {
+            background: var(--primary-light);
+            border: 1px solid var(--primary);
+            border-radius: var(--radius-md);
+            padding: var(--space-3);
+            margin-top: var(--space-4);
+            font-size: 13px;
+        }
+
+        .info-box-title { font-weight: 600; margin-bottom: var(--space-2); color: var(--primary); }
+
+        .statusbar-left { display: flex; align-items: center; gap: var(--space-3); }
+        .statusbar-path { font-family: 'Cascadia Code', monospace; font-size: 11px; }
+
+        /* Layout Toggle Icons */
+        .layout-toggle {
+            display: flex;
+            gap: 2px;
+            background: var(--bg-base);
+            padding: 2px;
+            border-radius: var(--radius-sm);
+        }
+
+        .layout-btn {
+            width: 20px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            cursor: pointer;
+            padding: 1px;
+            background: var(--bg-base);
+        }
+
+        .layout-btn:hover { border-color: var(--primary); }
+        .layout-btn.active { border-color: var(--primary); background: var(--primary-light); }
+
+        .layout-grid {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            gap: 1px;
+        }
+
+        .layout-cell {
+            background: var(--text-tertiary);
+            border-radius: 1px;
+        }
+
+        .layout-btn.active .layout-cell { background: var(--primary); }
+
+        /* Layout Types */
+        .layout-1x1 { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+        .layout-1x2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
+        .layout-1x3 { grid-template-columns: 1fr 1fr 1fr; grid-template-rows: 1fr; }
+        .layout-top2-bottom1 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+        .layout-top1-bottom2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+        .layout-2x2 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+        .layout-1x2-v { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+
+        /* Keyboard Shortcuts Overlay */
+        .shortcuts-panel {
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+            padding: var(--space-4);
+            margin-top: var(--space-4);
+        }
+
+        .shortcut-row {
+            display: flex;
+            align-items: center;
+            gap: var(--space-3);
+            padding: var(--space-2) 0;
+        }
+
+        .shortcut-keys { display: flex; gap: var(--space-1); }
+    </style>
+</head>
+<body>
+    <!-- Section 1: Typography -->
+    <div class="section">
+        <div class="section-title">字体排版系统</div>
+        <div class="typography-grid">
+            <div class="type-row">
+                <div class="type-label">Display / 显示</div>
+                <div class="type-display">Zero Explorer</div>
+            </div>
+            <div class="type-row">
+                <div class="type-label">Title / 标题</div>
+                <div class="type-title">文件管理器</div>
+            </div>
+            <div class="type-row">
+                <div class="type-label">Body / 正文</div>
+                <div class="type-body">让文件管理回归简单，让效率自然而然。</div>
+            </div>
+            <div class="type-row">
+                <div class="type-label">Monospace / 等宽</div>
+                <div class="type-mono">D:\work_space\personal_workspace</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 2: Colors -->
+    <div class="section">
+        <div class="section-title">颜色系统</div>
+        <div class="section-subtitle">主色调 - Windows 系统蓝</div>
+        <div class="color-grid">
+            <div class="color-swatch">
+                <div class="color-preview" style="background: #0078D4;"></div>
+                <div class="color-info"><div class="color-name">Primary</div><div class="color-value">#0078D4</div></div>
+            </div>
+            <div class="color-swatch">
+                <div class="color-preview" style="background: #106EBE;"></div>
+                <div class="color-info"><div class="color-name">Primary Hover</div><div class="color-value">#106EBE</div></div>
+            </div>
+            <div class="color-swatch">
+                <div class="color-preview" style="background: #E8F4FD;"></div>
+                <div class="color-info"><div class="color-name">Primary Light</div><div class="color-value">#E8F4FD</div></div>
+            </div>
+            <div class="color-swatch">
+                <div class="color-preview" style="background: #1A1A1A;"></div>
+                <div class="color-info"><div class="color-name">Text Primary</div><div class="color-value">#1A1A1A</div></div>
+            </div>
+            <div class="color-swatch">
+                <div class="color-preview" style="background: #616161;"></div>
+                <div class="color-info"><div class="color-name">Text Secondary</div><div class="color-value">#616161</div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 3: Components -->
+    <div class="section">
+        <div class="section-title">组件示例</div>
+
+        <div class="section-subtitle">按钮</div>
+        <div class="button-row">
+            <button class="btn btn-primary">主要操作</button>
+            <button class="btn btn-secondary">次要操作</button>
+            <button class="btn btn-ghost">文本操作</button>
+        </div>
+
+        <div class="section-subtitle">快捷键</div>
+        <div class="shortcuts-panel">
+            <div class="shortcut-row">
+                <div class="shortcut-keys">
+                    <span class="shortcut-hint">Space</span>
+                </div>
+                <span style="color: var(--text-secondary);">打开/关闭预览面板</span>
+            </div>
+            <div class="shortcut-row">
+                <div class="shortcut-keys">
+                    <span class="shortcut-hint">Ctrl</span>
+                    <span>+</span>
+                    <span class="shortcut-hint">Shift</span>
+                    <span>+</span>
+                    <span class="shortcut-hint">B</span>
+                </div>
+                <span style="color: var(--text-secondary);">切换侧边栏</span>
+            </div>
+            <div class="shortcut-row">
+                <div class="shortcut-keys">
+                    <span class="shortcut-hint">双击</span>
+                </div>
+                <span style="color: var(--text-secondary);">面包屑 → 绝对路径输入框</span>
+            </div>
+        </div>
+
+        <div class="section-subtitle" style="margin-top: var(--space-4);">文件列表</div>
+        <div class="file-list">
+            <div class="file-list-header">
+                <div></div>
+                <div>名称</div>
+                <div>类型</div>
+                <div style="text-align: right;">大小</div>
+                <div>修改时间</div>
+            </div>
+            <div class="file-list-row selected">
+                <div class="file-icon">📁</div>
+                <div class="file-name">src</div>
+                <div class="file-type">文件夹</div>
+                <div class="file-size"></div>
+                <div class="file-date">2026-08-31 10:24</div>
+            </div>
+            <div class="file-list-row">
+                <div class="file-icon">📁</div>
+                <div class="file-name">docs</div>
+                <div class="file-type">文件夹</div>
+                <div class="file-size"></div>
+                <div class="file-date">2026-08-30 15:32</div>
+            </div>
+            <div class="file-list-row">
+                <div class="file-icon">🦀</div>
+                <div class="file-name">main.rs</div>
+                <div class="file-type">Rust 源代码</div>
+                <div class="file-size">4.2 KB</div>
+                <div class="file-date">2026-08-29 09:15</div>
+            </div>
+            <div class="file-list-row">
+                <div class="file-icon">📝</div>
+                <div class="file-name">README.md</div>
+                <div class="file-type">Markdown</div>
+                <div class="file-size">2.4 KB</div>
+                <div class="file-date">2026-08-28 14:20</div>
+            </div>
+            <div class="file-list-row">
+                <div class="file-icon">🖼️</div>
+                <div class="file-name">logo.png</div>
+                <div class="file-type">PNG 图片</div>
+                <div class="file-size">128 KB</div>
+                <div class="file-date">2026-08-27 11:30</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section 4: Full Layout Wireframe -->
+    <div class="section">
+        <div class="section-title">完整布局线框图</div>
+        <div class="section-subtitle">面包屑在 Tab 上方 · 侧边栏默认隐藏 · 空格键预览</div>
+
+        <div style="margin-bottom: var(--space-3); display: flex; gap: var(--space-3); align-items: center;">
+            <button class="btn btn-secondary" onclick="toggleSidebar()">
+                <span id="sidebarToggleText">显示侧边栏</span>
+            </button>
+            <span style="color: var(--text-tertiary); font-size: 13px;">
+                <span class="shortcut-hint">Ctrl</span>+<span class="shortcut-hint">Shift</span>+<span class="shortcut-hint">B</span>
+            </span>
+            <button class="btn btn-secondary" onclick="togglePreview()">预览面板</button>
+            <span style="color: var(--text-tertiary); font-size: 13px;">
+                <span class="shortcut-hint">Space</span>
+            </span>
+        </div>
+
+        <div class="full-layout" id="mainLayout">
+            <!-- Sidebar -->
+            <div class="layout-sidebar">
+                <div class="sidebar">
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">快速访问</div>
+                        <div class="sidebar-item active">📁 桌面</div>
+                        <div class="sidebar-item">📁 下载</div>
+                        <div class="sidebar-item">📁 文档</div>
+                        <div class="sidebar-item">📁 图片</div>
+                    </div>
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">此电脑</div>
+                        <div class="sidebar-item">💾 本地磁盘 (C:)</div>
+                        <div class="sidebar-item">💾 工作磁盘 (D:)</div>
+                        <div class="sidebar-item">💾 数据磁盘 (E:)</div>
+                    </div>
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">收藏夹</div>
+                        <div class="sidebar-item">⭐ 项目文件</div>
+                        <div class="sidebar-item">⭐ 开发工具</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content - Dual Panel -->
+            <div class="layout-main">
+                <!-- Left Panel -->
+                <div class="wireframe-panel">
+                    <!-- 面包屑在 Tab 上方 -->
+                    <div class="panel-breadcrumb">
+                        <div class="breadcrumb" id="breadcrumb1">
+                            <span class="breadcrumb-item">D:</span>
+                            <span class="breadcrumb-sep">›</span>
+                            <span class="breadcrumb-item">work_space</span>
+                            <span class="breadcrumb-sep">›</span>
+                            <span class="breadcrumb-item">personal_workspace</span>
+                            <span class="breadcrumb-sep">›</span>
+                            <span class="breadcrumb-item current">src</span>
+                        </div>
+                        <input type="text" class="breadcrumb-input" id="breadcrumbInput1" placeholder="输入路径...">
+                    </div>
+                    <!-- Tab 在面包屑下方 -->
+                    <div class="panel-tabs" onclick="addTab(event, this)">
+                        <div class="panel-tab active" ondblclick="closeTab(event, this)">
+                            <span>src</span>
+                        </div>
+                        <div class="panel-tab" ondblclick="closeTab(event, this)">
+                            <span>docs</span>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="file-list">
+                            <div class="file-list-header">
+                                <div></div>
+                                <div>名称</div>
+                                <div>类型</div>
+                                <div style="text-align: right;">大小</div>
+                                <div>修改时间</div>
+                            </div>
+                            <div class="file-list-row" onclick="selectFile(this, 'components')">
+                                <div class="file-icon">📁</div>
+                                <div class="file-name">components</div>
+                                <div class="file-type">文件夹</div>
+                                <div class="file-size"></div>
+                                <div class="file-date">2026-08-31</div>
+                            </div>
+                            <div class="file-list-row" onclick="selectFile(this, 'utils')">
+                                <div class="file-icon">📁</div>
+                                <div class="file-name">utils</div>
+                                <div class="file-type">文件夹</div>
+                                <div class="file-size"></div>
+                                <div class="file-date">2026-08-30</div>
+                            </div>
+                            <div class="file-list-row selected" onclick="selectFile(this, 'main.rs')">
+                                <div class="file-icon">🦀</div>
+                                <div class="file-name">main.rs</div>
+                                <div class="file-type">Rust 源代码</div>
+                                <div class="file-size">4.2 KB</div>
+                                <div class="file-date">2026-08-29</div>
+                            </div>
+                            <div class="file-list-row" onclick="selectFile(this, 'lib.rs')">
+                                <div class="file-icon">🦀</div>
+                                <div class="file-name">lib.rs</div>
+                                <div class="file-type">Rust 源代码</div>
+                                <div class="file-size">1.8 KB</div>
+                                <div class="file-date">2026-08-28</div>
+                            </div>
+                            <div class="file-list-row" onclick="selectFile(this, 'README.md')">
+                                <div class="file-icon">📝</div>
+                                <div class="file-name">README.md</div>
+                                <div class="file-type">Markdown</div>
+                                <div class="file-size">2.4 KB</div>
+                                <div class="file-date">2026-08-27</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-statusbar">
+                        <span>5 个项目</span>
+                        <span>1 个选中</span>
+                    </div>
+                </div>
+
+                <!-- Right Panel -->
+                <div class="wireframe-panel">
+                    <!-- 面包屑在 Tab 上方 -->
+                    <div class="panel-breadcrumb">
+                        <div class="breadcrumb" id="breadcrumb2">
+                            <span class="breadcrumb-item">D:</span>
+                            <span class="breadcrumb-sep">›</span>
+                            <span class="breadcrumb-item">work_space</span>
+                            <span class="breadcrumb-sep">›</span>
+                            <span class="breadcrumb-item">personal_workspace</span>
+                            <span class="breadcrumb-sep">›</span>
+                            <span class="breadcrumb-item">zero-explorer</span>
+                            <span class="breadcrumb-sep">›</span>
+                            <span class="breadcrumb-item current">target</span>
+                        </div>
+                        <input type="text" class="breadcrumb-input" id="breadcrumbInput2" placeholder="输入路径...">
+                    </div>
+                    <!-- Tab 在面包屑下方 -->
+                    <div class="panel-tabs" onclick="addTab(event, this)">
+                        <div class="panel-tab active" ondblclick="closeTab(event, this)">
+                            <span>target</span>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="file-list">
+                            <div class="file-list-header">
+                                <div></div>
+                                <div>名称</div>
+                                <div>类型</div>
+                                <div style="text-align: right;">大小</div>
+                                <div>修改时间</div>
+                            </div>
+                            <div class="file-list-row" onclick="selectFile(this, 'debug')">
+                                <div class="file-icon">📁</div>
+                                <div class="file-name">debug</div>
+                                <div class="file-type">文件夹</div>
+                                <div class="file-size"></div>
+                                <div class="file-date">2026-08-31</div>
+                            </div>
+                            <div class="file-list-row" onclick="selectFile(this, 'release')">
+                                <div class="file-icon">📁</div>
+                                <div class="file-name">release</div>
+                                <div class="file-type">文件夹</div>
+                                <div class="file-size"></div>
+                                <div class="file-date">2026-08-30</div>
+                            </div>
+                            <div class="file-list-row" onclick="selectFile(this, 'zero-explorer.pdb')">
+                                <div class="file-icon">📄</div>
+                                <div class="file-name">zero-explorer.pdb</div>
+                                <div class="file-type">调试符号</div>
+                                <div class="file-size">12.5 MB</div>
+                                <div class="file-date">2026-08-29</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-statusbar">
+                        <span>3 个项目</span>
+                        <span></span>
+                    </div>
+                </div>
+
+                <!-- Third Panel -->
+                <div class="wireframe-panel">
+                    <!-- 面包屑在 Tab 上方 -->
+                    <div class="panel-breadcrumb">
+                        <div class="breadcrumb" id="breadcrumb3">
+                            <span class="breadcrumb-item">E:</span>
+                            <span class="breadcrumb-sep">›</span>
+                            <span class="breadcrumb-item">backup</span>
+                            <span class="breadcrumb-sep">›</span>
+                            <span class="breadcrumb-item current">2026</span>
+                        </div>
+                        <input type="text" class="breadcrumb-input" id="breadcrumbInput3" placeholder="输入路径...">
+                    </div>
+                    <!-- Tab 在面包屑下方 -->
+                    <div class="panel-tabs" onclick="addTab(event, this)">
+                        <div class="panel-tab active" ondblclick="closeTab(event, this)">
+                            <span>2026</span>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="file-list">
+                            <div class="file-list-header">
+                                <div></div>
+                                <div>名称</div>
+                                <div>类型</div>
+                                <div style="text-align: right;">大小</div>
+                                <div>修改时间</div>
+                            </div>
+                            <div class="file-list-row">
+                                <div class="file-icon">📁</div>
+                                <div class="file-name">projects</div>
+                                <div class="file-type">文件夹</div>
+                                <div class="file-size"></div>
+                                <div class="file-date">2026-08-30</div>
+                            </div>
+                            <div class="file-list-row">
+                                <div class="file-icon">📁</div>
+                                <div class="file-name">documents</div>
+                                <div class="file-type">文件夹</div>
+                                <div class="file-size"></div>
+                                <div class="file-date">2026-08-29</div>
+                            </div>
+                            <div class="file-list-row">
+                                <div class="file-icon">📦</div>
+                                <div class="file-name">archive.zip</div>
+                                <div class="file-type">压缩文件</div>
+                                <div class="file-size">256 KB</div>
+                                <div class="file-date">2026-08-28</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-statusbar">
+                        <span>3 个项目</span>
+                        <span></span>
+                    </div>
+                </div>
+
+                <!-- Fourth Panel -->
+                <div class="wireframe-panel">
+                    <!-- 面包屑在 Tab 上方 -->
+                    <div class="panel-breadcrumb">
+                        <div class="breadcrumb" id="breadcrumb4">
+                            <span class="breadcrumb-item">C:</span>
+                            <span class="breadcrumb-sep">›</span>
+                            <span class="breadcrumb-item">Users</span>
+                            <span class="breadcrumb-sep">›</span>
+                            <span class="breadcrumb-item">wang</span>
+                            <span class="breadcrumb-sep">›</span>
+                            <span class="breadcrumb-item current">Desktop</span>
+                        </div>
+                        <input type="text" class="breadcrumb-input" id="breadcrumbInput4" placeholder="输入路径...">
+                    </div>
+                    <!-- Tab 在面包屑下方 -->
+                    <div class="panel-tabs" onclick="addTab(event, this)">
+                        <div class="panel-tab active" ondblclick="closeTab(event, this)">
+                            <span>Desktop</span>
+                        </div>
+                    </div>
+                    <div class="panel-content">
+                        <div class="file-list">
+                            <div class="file-list-header">
+                                <div></div>
+                                <div>名称</div>
+                                <div>类型</div>
+                                <div style="text-align: right;">大小</div>
+                                <div>修改时间</div>
+                            </div>
+                            <div class="file-list-row">
+                                <div class="file-icon">📝</div>
+                                <div class="file-name">notes.txt</div>
+                                <div class="file-type">文本文件</div>
+                                <div class="file-size">1.2 KB</div>
+                                <div class="file-date">2026-08-31</div>
+                            </div>
+                            <div class="file-list-row">
+                                <div class="file-icon">🖼️</div>
+                                <div class="file-name">screenshot.png</div>
+                                <div class="file-type">PNG 图片</div>
+                                <div class="file-size">2.5 MB</div>
+                                <div class="file-date">2026-08-30</div>
+                            </div>
+                            <div class="file-list-row">
+                                <div class="file-icon">📕</div>
+                                <div class="file-name">report.pdf</div>
+                                <div class="file-type">PDF 文档</div>
+                                <div class="file-size">5.8 MB</div>
+                                <div class="file-date">2026-08-29</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel-statusbar">
+                        <span>3 个项目</span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Bar -->
+            <div class="layout-statusbar">
+                <div class="statusbar-left">
+                    <span>就绪</span>
+                    <span style="color: var(--border);">|</span>
+                    <span class="statusbar-path">D:\work_space\personal_workspace\zero-explorer</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: var(--space-3);">
+                    <!-- 分栏布局切换 -->
+                    <div class="layout-toggle">
+                        <!-- 1分栏 -->
+                        <div class="layout-btn active" data-layout="1" onclick="setLayout(1)" title="1 分栏">
+                            <div class="layout-grid layout-1x1">
+                                <div class="layout-cell"></div>
+                            </div>
+                        </div>
+                        <!-- 2左右分栏 -->
+                        <div class="layout-btn" data-layout="2" onclick="setLayout(2)" title="2 左右分栏">
+                            <div class="layout-grid layout-1x2">
+                                <div class="layout-cell"></div>
+                                <div class="layout-cell"></div>
+                            </div>
+                        </div>
+                        <!-- 上下分栏 -->
+                        <div class="layout-btn" data-layout="7" onclick="setLayout(7)" title="上下分栏">
+                            <div class="layout-grid layout-1x2-v">
+                                <div class="layout-cell"></div>
+                                <div class="layout-cell"></div>
+                            </div>
+                        </div>
+                        <!-- 3左中右分栏 -->
+                        <div class="layout-btn" data-layout="3" onclick="setLayout(3)" title="3 左中右分栏">
+                            <div class="layout-grid layout-1x3">
+                                <div class="layout-cell"></div>
+                                <div class="layout-cell"></div>
+                                <div class="layout-cell"></div>
+                            </div>
+                        </div>
+                        <!-- 上2下1 -->
+                        <div class="layout-btn" data-layout="4" onclick="setLayout(4)" title="上 2 下 1">
+                            <div class="layout-grid layout-top2-bottom1">
+                                <div class="layout-cell" style="grid-column: 1; grid-row: 1;"></div>
+                                <div class="layout-cell" style="grid-column: 2; grid-row: 1;"></div>
+                                <div class="layout-cell" style="grid-column: 1 / -1; grid-row: 2;"></div>
+                            </div>
+                        </div>
+                        <!-- 上1下2 -->
+                        <div class="layout-btn" data-layout="5" onclick="setLayout(5)" title="上 1 下 2">
+                            <div class="layout-grid layout-top1-bottom2">
+                                <div class="layout-cell" style="grid-column: 1 / -1; grid-row: 1;"></div>
+                                <div class="layout-cell" style="grid-column: 1; grid-row: 2;"></div>
+                                <div class="layout-cell" style="grid-column: 2; grid-row: 2;"></div>
+                            </div>
+                        </div>
+                        <!-- 4分栏 -->
+                        <div class="layout-btn" data-layout="6" onclick="setLayout(6)" title="4 分栏">
+                            <div class="layout-grid layout-2x2">
+                                <div class="layout-cell"></div>
+                                <div class="layout-cell"></div>
+                                <div class="layout-cell"></div>
+                                <div class="layout-cell"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <span style="color: var(--border);">|</span>
+                    <span>8 个项目</span>
+                    <span style="color: var(--border);">|</span>
+                    <span>1 个选中</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <div class="info-box-title">布局说明</div>
+            <ul style="margin-left: 20px; margin-top: var(--space-2);">
+                <li><strong>面包屑在 Tab 上方</strong>：单击跳转目录，双击切换为绝对路径输入框</li>
+                <li><strong>Tab 在面包屑下方</strong>：每个 Tab 对应一个独立路径</li>
+                <li><strong>侧边栏默认隐藏</strong>：<span class="shortcut-hint">Ctrl</span>+<span class="shortcut-hint">Shift</span>+<span class="shortcut-hint">B</span> 切换</li>
+                <li><strong>预览面板</strong>：<span class="shortcut-hint">Space</span> 打开/关闭，支持 1/3 和 2/3 宽度</li>
+                <li><strong>文件列表</strong>：图标 + 名称 + 类型 + 大小 + 修改时间</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Preview Overlay -->
+    <div class="preview-overlay" id="previewOverlay">
+        <div class="preview-header">
+            <div class="preview-size-toggle">
+                <button class="preview-size-btn active" onclick="setPreviewSize('1/3')">1/3</button>
+                <button class="preview-size-btn" onclick="setPreviewSize('2/3')">2/3</button>
+            </div>
+            <div class="preview-close" onclick="togglePreview()">×</div>
+        </div>
+        <div class="preview-content">
+            <div class="preview-thumbnail" id="previewThumbnail">🦀</div>
+            <div class="preview-info">
+                <div class="preview-row">
+                    <span class="preview-label">文件名:</span>
+                    <span class="preview-value" id="previewName">main.rs</span>
+                </div>
+                <div class="preview-row">
+                    <span class="preview-label">类型:</span>
+                    <span class="preview-value" id="previewType">Rust 源代码文件 (.rs)</span>
+                </div>
+                <div class="preview-row">
+                    <span class="preview-label">大小:</span>
+                    <span class="preview-value" id="previewSize">4.2 KB (4,200 字节)</span>
+                </div>
+                <div class="preview-row">
+                    <span class="preview-label">创建时间:</span>
+                    <span class="preview-value" id="previewCreated">2026-08-28 14:20:33</span>
+                </div>
+                <div class="preview-row">
+                    <span class="preview-label">修改时间:</span>
+                    <span class="preview-value" id="previewModified">2026-08-29 09:15:07</span>
+                </div>
+                <div class="preview-row">
+                    <span class="preview-label">访问时间:</span>
+                    <span class="preview-value" id="previewAccessed">2026-08-31 10:24:15</span>
+                </div>
+                <div class="preview-row">
+                    <span class="preview-label">路径:</span>
+                    <span class="preview-value mono" id="previewPath">D:\work_space\src\main.rs</span>
+                </div>
+            </div>
+            <div class="preview-code">
+                <div class="preview-code-header">内容预览:</div>
+                <pre class="preview-code-content" id="previewCode">use std::env;
+
+mod components;
+mod utils;
+
+fn main() {
+    let args: Vec&lt;String&gt; = env::args().collect();
+    println!("Zero Explorer v{}", env!("CARGO_PKG_VERSION"));
+    
+    if args.len() > 1 {
+        let path = &args[1];
+        println!("Opening: {}", path);
+    }
+}</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 文件数据
+        const fileData = {
+            'main.rs': {
+                icon: '🦀', name: 'main.rs', type: 'Rust 源代码文件 (.rs)',
+                size: '4.2 KB (4,200 字节)', created: '2026-08-28 14:20:33',
+                modified: '2026-08-29 09:15:07', accessed: '2026-08-31 10:24:15',
+                path: 'D:\\work_space\\src\\main.rs',
+                code: `use std::env;
+
+mod components;
+mod utils;
+
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    println!("Zero Explorer v{}", env!("CARGO_PKG_VERSION"));
+    
+    if args.len() > 1 {
+        let path = &args[1];
+        println!("Opening: {}", path);
+    }
+}`
+            },
+            'lib.rs': {
+                icon: '🦀', name: 'lib.rs', type: 'Rust 源代码文件 (.rs)',
+                size: '1.8 KB (1,800 字节)', created: '2026-08-27 09:30:00',
+                modified: '2026-08-28 14:20:33', accessed: '2026-08-31 10:24:15',
+                path: 'D:\\work_space\\src\\lib.rs',
+                code: `pub mod components;
+pub mod utils;
+
+pub fn init() {
+    println!("Library initialized");
+}`
+            },
+            'README.md': {
+                icon: '📝', name: 'README.md', type: 'Markdown 文件 (.md)',
+                size: '2.4 KB (2,400 字节)', created: '2026-08-26 11:00:00',
+                modified: '2026-08-27 09:15:00', accessed: '2026-08-31 10:24:15',
+                path: 'D:\\work_space\\README.md',
+                code: `# Zero Explorer
+
+高性能文件管理器，为 Windows 10/11 设计。
+
+## 特性
+
+- 多面板布局
+- 独立标签页
+- 现代 UI 设计
+- 极致性能`
+            },
+            'components': {
+                icon: '📁', name: 'components', type: '文件夹',
+                size: '', created: '2026-08-25 08:00:00',
+                modified: '2026-08-31 10:24:00', accessed: '2026-08-31 10:24:00',
+                path: 'D:\\work_space\\src\\components',
+                code: `[文件夹内容]\n- button.rs\n- panel.rs\n- tab.rs\n- sidebar.rs`
+            },
+            'utils': {
+                icon: '📁', name: 'utils', type: '文件夹',
+                size: '', created: '2026-08-25 08:00:00',
+                modified: '2026-08-30 15:32:00', accessed: '2026-08-31 10:24:00',
+                path: 'D:\\work_space\\src\\utils',
+                code: `[文件夹内容]\n- fs.rs\n- path.rs\n- config.rs`
+            },
+            'debug': {
+                icon: '📁', name: 'debug', type: '文件夹',
+                size: '', created: '2026-08-28 14:20:00',
+                modified: '2026-08-31 10:24:00', accessed: '2026-08-31 10:24:00',
+                path: 'D:\\work_space\\target\\debug',
+                code: `[文件夹内容]\n- zero-explorer.exe\n- zero-explorer.pdb\n- build/`
+            },
+            'release': {
+                icon: '📁', name: 'release', type: '文件夹',
+                size: '', created: '2026-08-28 14:20:00',
+                modified: '2026-08-30 15:32:00', accessed: '2026-08-31 10:24:00',
+                path: 'D:\\work_space\\target\\release',
+                code: `[文件夹内容]\n- zero-explorer.exe\n- zero-explorer.pdb`
+            },
+            'zero-explorer.pdb': {
+                icon: '📄', name: 'zero-explorer.pdb', type: '调试符号文件 (.pdb)',
+                size: '12.5 MB (12,500,000 字节)', created: '2026-08-29 09:15:00',
+                modified: '2026-08-29 09:15:07', accessed: '2026-08-31 10:24:15',
+                path: 'D:\\work_space\\target\\debug\\zero-explorer.pdb',
+                code: `[二进制文件，无法显示内容]`
+            },
+            'projects': {
+                icon: '📁', name: 'projects', type: '文件夹',
+                size: '', created: '2026-08-20 08:00:00',
+                modified: '2026-08-30 15:32:00', accessed: '2026-08-31 10:24:00',
+                path: 'E:\\backup\\2026\\projects',
+                code: `[文件夹内容]\n- zero-explorer/\n- web-app/\n- mobile-app/`
+            },
+            'documents': {
+                icon: '📁', name: 'documents', type: '文件夹',
+                size: '', created: '2026-08-15 08:00:00',
+                modified: '2026-08-29 14:20:00', accessed: '2026-08-31 10:24:00',
+                path: 'E:\\backup\\2026\\documents',
+                code: `[文件夹内容]\n- contracts/\n- invoices/\n- reports/`
+            },
+            'archive.zip': {
+                icon: '📦', name: 'archive.zip', type: 'ZIP 压缩文件 (.zip)',
+                size: '256 KB (256,000 字节)', created: '2026-08-28 10:00:00',
+                modified: '2026-08-28 10:00:00', accessed: '2026-08-31 10:24:15',
+                path: 'E:\\backup\\2026\\archive.zip',
+                code: `[压缩文件，无法显示内容]`
+            },
+            'notes.txt': {
+                icon: '📝', name: 'notes.txt', type: '纯文本文件 (.txt)',
+                size: '1.2 KB (1,200 字节)', created: '2026-08-30 09:00:00',
+                modified: '2026-08-31 08:30:00', accessed: '2026-08-31 10:24:15',
+                path: 'C:\\Users\\wang\\Desktop\\notes.txt',
+                code: `会议记录 - 2026年8月31日
+
+1. 项目进度汇报
+   - 前端：完成 80%
+   - 后端：完成 60%
+   - 测试：进行中
+
+2. 下一步计划
+   - 完成 API 开发
+   - 部署测试环境
+   - 用户验收测试`
+            },
+            'screenshot.png': {
+                icon: '🖼️', name: 'screenshot.png', type: 'PNG 图片 (.png)',
+                size: '2.5 MB (2,500,000 字节)', created: '2026-08-30 14:30:00',
+                modified: '2026-08-30 14:30:00', accessed: '2026-08-31 10:24:15',
+                path: 'C:\\Users\\wang\\Desktop\\screenshot.png',
+                code: `[图片文件]\n分辨率: 1920 x 1080\n格式: PNG\n位深度: 32 位`
+            },
+            'report.pdf': {
+                icon: '📕', name: 'report.pdf', type: 'PDF 文档 (.pdf)',
+                size: '5.8 MB (5,800,000 字节)', created: '2026-08-29 16:00:00',
+                modified: '2026-08-29 16:00:00', accessed: '2026-08-31 10:24:15',
+                path: 'C:\\Users\\wang\\Desktop\\report.pdf',
+                code: `[PDF 文档]\n页数: 42 页\n作者: 张三\n创建日期: 2026年8月29日`
+            }
+        };
+
+        let selectedFileName = 'main.rs';
+
+        // 分栏布局切换
+        let currentLayout = 1;
+
+        function setLayout(layout) {
+            currentLayout = layout;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.layout-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (parseInt(btn.dataset.layout) === layout) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // 更新面板显示
+            const mainLayout = document.getElementById('mainLayout');
+            const layoutMain = mainLayout.querySelector('.layout-main');
+            const panels = layoutMain.querySelectorAll('.wireframe-panel');
+            
+            // 更新 layout-main 的 class
+            layoutMain.className = 'layout-main layout-' + layout;
+
+            // 重置所有面板
+            panels.forEach(panel => {
+                panel.style.display = 'flex';
+                panel.style.gridColumn = '';
+                panel.style.gridRow = '';
+            });
+
+            // 根据布局类型调整面板
+            switch(layout) {
+                case 1: // 1分栏 - 只显示第一个面板
+                    panels.forEach((panel, i) => {
+                        if (i > 0) panel.style.display = 'none';
+                    });
+                    break;
+                case 2: // 2左右分栏
+                    panels.forEach((panel, i) => {
+                        if (i > 1) panel.style.display = 'none';
+                    });
+                    break;
+                case 3: // 3左中右分栏
+                    panels.forEach((panel, i) => {
+                        if (i > 2) panel.style.display = 'none';
+                    });
+                    break;
+                case 4: // 上2下1
+                    panels.forEach((panel, i) => {
+                        if (i > 2) panel.style.display = 'none';
+                        if (i === 2) {
+                            panel.style.gridColumn = '1 / -1';
+                        }
+                    });
+                    break;
+                case 5: // 上1下2
+                    panels.forEach((panel, i) => {
+                        if (i > 2) panel.style.display = 'none';
+                        if (i === 0) {
+                            panel.style.gridColumn = '1 / -1';
+                        }
+                    });
+                    break;
+                case 6: // 4分栏
+                    panels.forEach((panel, i) => {
+                        if (i > 3) panel.style.display = 'none';
+                    });
+                    break;
+                case 7: // 上下分栏
+                    panels.forEach((panel, i) => {
+                        if (i > 1) panel.style.display = 'none';
+                        if (i === 1) {
+                            panel.style.gridRow = '2';
+                        }
+                    });
+                    break;
+            }
+        }
+
+        // 侧边栏切换
+        function toggleSidebar() {
+            const layout = document.getElementById('mainLayout');
+            const text = document.getElementById('sidebarToggleText');
+            layout.classList.toggle('sidebar-visible');
+            text.textContent = layout.classList.contains('sidebar-visible') ? '隐藏侧边栏' : '显示侧边栏';
+        }
+
+        // 预览面板切换
+        function togglePreview() {
+            const overlay = document.getElementById('previewOverlay');
+            overlay.classList.toggle('visible');
+        }
+
+        // 预览面板大小切换
+        function setPreviewSize(size) {
+            const overlay = document.getElementById('previewOverlay');
+            const buttons = document.querySelectorAll('.preview-size-btn');
+            
+            if (size === '2/3') {
+                overlay.classList.add('wide');
+                buttons[0].classList.remove('active');
+                buttons[1].classList.add('active');
+            } else {
+                overlay.classList.remove('wide');
+                buttons[0].classList.add('active');
+                buttons[1].classList.remove('active');
+            }
+        }
+
+        // 新增 Tab
+        function addTab(event, tabsContainer) {
+            // 如果点击的是已有 tab，则不处理
+            if (event.target.closest('.panel-tab')) return;
+            
+            const tabNames = ['新标签页', '文档', '图片', '下载', '音乐', '视频'];
+            const randomName = tabNames[Math.floor(Math.random() * tabNames.length)];
+            
+            const newTab = document.createElement('div');
+            newTab.className = 'panel-tab';
+            newTab.innerHTML = `<span>${randomName}</span>`;
+            newTab.ondblclick = function(e) { closeTab(e, this); };
+            
+            tabsContainer.appendChild(newTab);
+            
+            // 激活新 tab
+            tabsContainer.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+            newTab.classList.add('active');
+        }
+
+        // 关闭 Tab（需要确认）
+        function closeTab(event, tab) {
+            event.stopPropagation();
+            
+            const tabName = tab.querySelector('span').textContent;
+            const tabsContainer = tab.parentElement;
+            const tabCount = tabsContainer.querySelectorAll('.panel-tab').length;
+            
+            // 如果只有一个 tab，不允关闭
+            if (tabCount <= 1) {
+                alert('至少保留一个标签页');
+                return;
+            }
+            
+            // 确认对话框
+            if (confirm(`确定要关闭标签页 "${tabName}" 吗？`)) {
+                const isActive = tab.classList.contains('active');
+                tab.remove();
+                
+                // 如果关闭的是激活的 tab，激活第一个
+                if (isActive) {
+                    const firstTab = tabsContainer.querySelector('.panel-tab');
+                    if (firstTab) firstTab.classList.add('active');
+                }
+            }
+        }
+
+        // 选择文件
+        function selectFile(row, fileName) {
+            // 移除其他选中状态
+            document.querySelectorAll('.file-list-row').forEach(r => r.classList.remove('selected'));
+            // 添加当前选中状态
+            row.classList.add('selected');
+            selectedFileName = fileName;
+            
+            // 更新预览内容
+            updatePreview(fileName);
+        }
+
+        // 更新预览内容
+        function updatePreview(fileName) {
+            const data = fileData[fileName];
+            if (!data) return;
+
+            document.getElementById('previewThumbnail').textContent = data.icon;
+            document.getElementById('previewName').textContent = data.name;
+            document.getElementById('previewType').textContent = data.type;
+            document.getElementById('previewSize').textContent = data.size || '-';
+            document.getElementById('previewCreated').textContent = data.created;
+            document.getElementById('previewModified').textContent = data.modified;
+            document.getElementById('previewAccessed').textContent = data.accessed;
+            document.getElementById('previewPath').textContent = data.path;
+            document.getElementById('previewCode').textContent = data.code;
+        }
+
+        // 面包屑双击切换输入模式
+        document.querySelectorAll('.breadcrumb').forEach(breadcrumb => {
+            breadcrumb.addEventListener('dblclick', function() {
+                const input = this.nextElementSibling;
+                const currentPath = Array.from(this.querySelectorAll('.breadcrumb-item'))
+                    .map(item => item.textContent)
+                    .join('\\');
+                this.style.display = 'none';
+                input.style.display = 'block';
+                input.value = currentPath;
+                input.focus();
+                input.select();
+            });
+        });
+
+        // 输入框回车跳转，Esc取消
+        document.querySelectorAll('.breadcrumb-input').forEach(input => {
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    const path = this.value;
+                    const breadcrumb = this.previousElementSibling;
+                    const items = path.split('\\').filter(Boolean);
+                    breadcrumb.innerHTML = items.map((item, i) => 
+                        `<span class="breadcrumb-item${i === items.length - 1 ? ' current' : ''}">${item}</span>${i < items.length - 1 ? '<span class="breadcrumb-sep">›</span>' : ''}`
+                    ).join('');
+                    this.style.display = 'none';
+                    breadcrumb.style.display = 'flex';
+                }
+                if (e.key === 'Escape') {
+                    this.style.display = 'none';
+                    this.previousElementSibling.style.display = 'flex';
+                }
+            });
+        });
+
+        // 键盘快捷键
+        document.addEventListener('keydown', function(e) {
+            // Space 打开/关闭预览（排除输入框）
+            if (e.code === 'Space' && !e.target.matches('input, textarea')) {
+                e.preventDefault();
+                togglePreview();
+            }
+            // Ctrl+Shift+B 切换侧边栏
+            if (e.ctrlKey && e.shiftKey && e.code === 'KeyB') {
+                e.preventDefault();
+                toggleSidebar();
+            }
+            // Esc 关闭预览
+            if (e.code === 'Escape') {
+                const overlay = document.getElementById('previewOverlay');
+                if (overlay.classList.contains('visible')) {
+                    togglePreview();
+                }
+            }
+        });
+
+        // 初始化预览内容
+        updatePreview('main.rs');
+    </script>
+</body>
+</html>

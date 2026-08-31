@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zero Explorer — UI 线框图</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #f4f1ea;
+    --ink: #2b2b28;
+    --ink-soft: #6b6b64;
+    --grid-dot: rgba(43, 43, 40, 0.08);
+    --line: #2b2b28;
+    --accent: #ff5941;
+    --accent-2: #2e6cf6;
+    --hl: rgba(255, 89, 65, 0.10);
+    --hl-2: rgba(46, 108, 246, 0.10);
+    --card-shadow: rgba(43, 43, 40, 0.12);
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', 'Noto Sans SC', sans-serif;
+    --hand: 'Architects Daughter', 'Noto Sans SC', cursive;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    padding: 48px 40px 80px;
+    background-image: radial-gradient(var(--grid-dot) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* ============ 页面头部 ============ */
+  .page-head {
+    max-width: 1180px;
+    margin: 0 auto 56px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .page-head h1 {
+    font-family: var(--mono);
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .page-head h1 .zx-mark {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 4px 10px;
+    font-weight: 500;
+  }
+  .page-head .meta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: 1px;
+  }
+  .page-desc {
+    max-width: 1180px;
+    margin: 0 auto 8px;
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+  }
+  .page-desc strong { color: var(--ink); }
+
+  /* ============ 标题条 ============ */
+  .section-bar {
+    max-width: 1180px;
+    margin: 64px auto 28px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .section-bar .num {
+    font-family: var(--mono);
+    font-size: 12px;
+    border: 1.5px solid var(--ink);
+    border-radius: 100px;
+    padding: 2px 10px;
+    letter-spacing: 1px;
+  }
+  .section-bar h2 {
+    font-size: 19px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+  }
+  .section-bar .tail {
+    flex: 1;
+    border-bottom: 1.5px dashed rgba(43,43,40,0.25);
+  }
+  .section-bar .note {
+    font-family: var(--hand);
+    font-size: 14px;
+    color: var(--accent);
+    transform: rotate(-1.2deg);
+  }
+
+  /* ============ 通用框架 ============ */
+  .frame {
+    max-width: 1180px;
+    margin: 0 auto;
+    background: #fdfcf8;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 6px 6px 0 var(--card-shadow);
+    overflow: hidden;
+    position: relative;
+  }
+  .frame::after {
+    content: attr(data-label);
+    position: absolute;
+    right: 14px;
+    top: -9px;
+    background: var(--paper);
+    border: 1.5px solid var(--line);
+    border-radius: 100px;
+    padding: 1px 12px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 1px;
+    color: var(--ink-soft);
+  }
+
+  /* 标注线（牵出说明） */
+  .callout {
+    font-family: var(--hand);
+    color: var(--accent);
+    font-size: 13.5px;
+    position: absolute;
+    line-height: 1.35;
+    max-width: 200px;
+    z-index: 5;
+  }
+  .callout::before {
+    content: "→";
+    margin-right: 4px;
+  }
+  .callout.blue { color: var(--accent-2); }
+
+  /* ============ 窗口骨架 ============ */
+  .win {
+    display: flex;
+    flex-direction: column;
+    height: 640px;
+    font-size: 12px;
+  }
+
+  /* 顶部：标题栏 + 工具栏 */
+  .titlebar {
+    height: 34px;
+    border-bottom: 1.5px solid var(--line);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 10px;
+    background: repeating-linear-gradient(45deg, transparent, transparent 6px, rgba(43,43,40,.03) 6px, rgba(43,43,40,.03) 12px);
+    flex-shrink: 0;
+  }
+  .win-controls { display: flex; gap: 6px; }
+  .win-controls span {
+    width: 11px; height: 11px;
+    border: 1.5px solid var(--line);
+    border-radius: 100%;
+    display: inline-block;
+  }
+  .titlebar .title {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.5px;
+    flex: 1;
+    text-align: center;
+    color: var(--ink-soft);
+  }
+
+  .toolbar {
+    height: 42px;
+    border-bottom: 1.5px solid var(--line);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .tb-btn {
+    height: 24px;
+    padding: 0 9px;
+    border: 1.2px solid var(--line);
+    border-radius: 5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-family: var(--mono);
+    background: #fff;
+  }
+  .tb-btn.accent { background: var(--ink); color: var(--paper); }
+  .tb-crumb {
+    flex: 1;
+    height: 24px;
+    border: 1.2px solid var(--line);
+    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    overflow: hidden;
+    white-space: nowrap;
+    background: #fff;
+  }
+  .tb-crumb b { color: var(--ink); font-weight: 500; }
+  .tb-crumb .sep { opacity: 0.4; }
+  .tb-search {
+    width: 190px;
+    height: 24px;
+    border: 1.2px solid var(--line);
+    border-radius: 5px;
+    font-family: var(--mono);
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    color: var(--ink-soft);
+    gap: 6px;
+    background: #fff;
+  }
+  .tb-search kbd {
+    margin-left: auto;
+    border: 1px solid rgba(43,43,40,.3);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 9px;
+    background: var(--paper);
+  }
+
+  /* 主体：侧栏 + 面板区 */
+  .win-body { flex: 1; display: flex; min-height: 0; }
+
+  .sidebar {
+    width: 190px;
+    border-right: 1.5px solid var(--line);
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    flex-shrink: 0;
+    background: rgba(43,43,40,.025);
+    overflow: hidden;
+  }
+  .sb-label {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 1.5px;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+  }
+  .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px;
+    border-radius: 5px;
+    font-size: 12px;
+    position: relative;
+  }
+  .sb-item .ico {
+    width: 14px; height: 14px;
+    border: 1.5px solid var(--line);
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .sb-item.on { background: var(--hl); border-left: 3px solid var(--accent); padding-left: 5px; }
+  .sb-item.on .ico { background: var(--line); }
+  .sb-tag {
+    width: 10px; height: 10px;
+    border: 1.5px solid var(--line);
+    border-radius: 100%;
+    flex-shrink: 0;
+  }
+  .tag-red { background: #ff5941; } .tag-blue { background: #2e6cf6; }
+  .tag-yellow { background: #ffc531; } .tag-green { background: #2ec27e; }
+
+  /* 面板区 */
+  .panes { flex: 1; display: flex; min-width: 0; }
+
+  .pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    border-right: 1.5px solid var(--line);
+    position: relative;
+  }
+  .pane:last-child { border-right: none; }
+
+  .pane-tabs {
+    height: 32px;
+    border-bottom: 1.5px solid var(--line);
+    display: flex;
+    align-items: stretch;
+    padding: 0 8px;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .pane-tab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    border: 1.2px solid transparent;
+    border-bottom: none;
+    border-radius: 6px 6px 0 0;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--ink-soft);
+    position: relative;
+    margin-top: 4px;
+  }
+  .pane-tab.on {
+    color: var(--ink);
+    border-color: var(--line);
+    background: #fff;
+    font-weight: 500;
+  }
+  .pane-tab.on::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0; bottom: -1.5px;
+    height: 2px;
+    background: #fff;
+  }
+  .pane-tab .x { opacity: 0.45; font-size: 10px; }
+  .pane-tab .dot {
+    width: 6px; height: 6px; border-radius: 100%;
+    background: var(--accent);
+    animation: blink 1.6s infinite;
+  }
+  @keyframes blink { 50% { opacity: 0.2; } }
+  .pane-tabs .newtab {
+    margin-left: auto;
+    align-self: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    border: 1.2px dashed rgba(43,43,40,.4);
+    border-radius: 5px;
+    padding: 1px 8px;
+  }
+
+  .pane-list { flex: 1; overflow: hidden; position: relative; }
+  .cols-head {
+    display: flex;
+    padding: 6px 12px;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.8px;
+    color: var(--ink-soft);
+    border-bottom: 1px solid rgba(43,43,40,.2);
+    background: rgba(43,43,40,.03);
+  }
+  .cols-head .c-name { flex: 1; }
+  .cols-head .c-size, .cols-head .c-date { width: 70px; }
+  .cols-head .c-tag { width: 30px; }
+
+  .frow {
+    display: flex;
+    padding: 4px 12px;
+    gap: 8px;
+    align-items: center;
+    font-size: 11.5px;
+    position: relative;
+  }
+  .frow + .frow { border-top: 1px solid rgba(43,43,40,.07); }
+  .frow .f-ico {
+    width: 13px; height: 13px;
+    border: 1.5px solid var(--line);
+    border-radius: 3px;
+    flex-shrink: 0;
+  }
+  .frow.folder .f-ico { border-radius: 0 4px 0 4px; }
+  .frow .f-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 400; }
+  .frow .f-size, .frow .f-date {
+    width: 70px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-soft);
+  }
+  .frow .f-tags { width: 30px; display: flex; gap: 3px; }
+  .frow .f-tags i { width: 7px; height: 7px; border-radius: 100%; display: block; }
+  .frow.sel {
+    background: var(--hl-2);
+    box-shadow: inset 3px 0 0 var(--accent-2);
+  }
+  .frow.cursor::before {
+    content: "";
+    position: absolute;
+    left: 2px;
+    width: 0; height: 0;
+    border-top: 4.5px solid transparent;
+    border-bottom: 4.5px solid transparent;
+    border-left: 6px solid var(--accent);
+  }
+  .frow.match { background: var(--hl); }
+
+  .filter-glow {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse 60% 40% at 30% 45%, rgba(255,89,65,.06), transparent 70%);
+  }
+
+  /* ============ 状态栏 ============ */
+  .statusbar {
+    height: 30px;
+    border-top: 1.5px solid var(--line);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 18px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    flex-shrink: 0;
+    background: rgba(43,43,40,.025);
+  }
+  .statusbar .grow { flex: 1; }
+  .statusbar .seg {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .statusbar .seg b { color: var(--ink); font-weight: 500; }
+  .statusbar .vim {
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0 6px;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 9px;
+    letter-spacing: 1px;
+  }
+
+  /* ============ 拖拽指示 ============ */
+  .ghost-tab {
+    position: absolute;
+    top: 44px; left: 48%;
+    transform: rotate(-4deg);
+    background: #fff;
+    border: 1.5px dashed var(--accent);
+    border-radius: 6px;
+    padding: 4px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    box-shadow: 3px 3px 0 rgba(255,89,65,.2);
+    z-index: 6;
+    pointer-events: none;
+  }
+  .drop-zone {
+    position: absolute;
+    right: 8px; top: 40px; bottom: 8px;
+    width: 26px;
+    border: 1.5px dashed var(--accent);
+    border-radius: 6px;
+    background: var(--hl);
+    z-index: 5;
+    pointer-events: none;
+  }
+  .drop-zone::after {
+    content: "松手竖切";
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%) rotate(90deg);
+    font-family: var(--hand);
+    font-size: 12px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  /* ============ 布局选择器 ============ */
+  .layout-strip {
+    max-width: 1180px;
+    margin: 20px auto 0;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 14px;
+  }
+  .layout-card {
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    background: #fdfcf8;
+    cursor: pointer;
+    transition: all .15s ease;
+    position: relative;
+  }
+  .layout-card:hover { transform: translateY(-2px); box-shadow: 4px 4px 0 var(--card-shadow); }
+  .layout-card.on { border-width: 2.5px; box-shadow: inset 0 0 0 1.5px var(--paper), 4px 4px 0 var(--accent); }
+  .layout-card .lc-grid {
+    height: 64px;
+    border: 1.2px solid var(--line);
+    border-radius: 4px;
+    display: grid;
+    gap: 2px;
+    padding: 3px;
+    margin-bottom: 8px;
+    background: #fff;
+  }
+  .lc-grid.g1 { grid-template-columns: 1fr; }
+  .lc-grid.g2v { grid-template-columns: 1fr 1fr; }
+  .lc-grid.g2h { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+  .lc-grid.g3 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+  .lc-grid.g3 .span2 { grid-row: 1 / 3; }
+  .lc-grid.g4 { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+  .lc-grid > div { border: 1.2px solid rgba(43,43,40,.5); border-radius: 3px; background: rgba(43,43,40,.05); }
+  .lc-grid > div.on { background: var(--hl); border-color: var(--accent); }
+  .layout-card .lc-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+  .layout-card .lc-key {
+    position: absolute;
+    top: 8px; right: 8px;
+    font-family: var(--mono);
+    font-size: 9px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 0 4px;
+    background: var(--paper);
+  }
+
+  /* ============ 视图模式小样 ============ */
+  .view-strip {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+  .view-card {
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fdfcf8;
+  }
+  .view-card .vc-head {
+    padding: 10px 14px;
+    border-bottom: 1.5px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    background: rgba(43,43,40,.04);
+  }
+  .view-card .vc-head em { font-style: normal; color: var(--accent); font-size: 10px; }
+  .view-card .vc-body { padding: 16px; min-height: 210px; position: relative; }
+
+  /* 列表视图 */
+  .mini-list .frow { padding: 3px 6px; }
+
+  /* 图标网格 */
+  .icon-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+  }
+  .ig-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 2px;
+    border-radius: 6px;
+    border: 1.2px solid transparent;
+  }
+  .ig-item .box {
+    width: 34px; height: 34px;
+    border: 1.5px solid var(--line);
+    border-radius: 5px;
+    background: #fff;
+    position: relative;
+  }
+  .ig-item.folder .box { border-radius: 0 8px 0 8px; }
+  .ig-item.img .box::after {
+    content: "";
+    position: absolute; inset: 5px;
+    background: repeating-linear-gradient(45deg, var(--line) 0 2px, transparent 2px 6px);
+    border-radius: 2px;
+  }
+  .ig-item .cap {
+    font-size: 9.5px;
+    text-align: center;
+    max-width: 70px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--ink-soft);
+  }
+  .ig-item.sel { border-color: var(--accent-2); background: var(--hl-2); }
+
+  /* 分栏视图 */
+  .colview { display: flex; height: 100%; gap: 0; }
+  .colview .cv-col {
+    flex: 1;
+    border-right: 1.2px solid rgba(43,43,40,.3);
+    padding: 4px 6px;
+    font-size: 10px;
+  }
+  .colview .cv-col:last-child { border: none; }
+  .cv-item { padding: 3px 6px; border-radius: 4px; position: relative; }
+  .cv-item.on { background: var(--hl-2); box-shadow: inset 2px 0 0 var(--accent-2); }
+  .cv-item .tri {
+    position: absolute; right: 4px;
+    font-size: 8px; color: var(--ink-soft);
+  }
+  .cv-col.cv-prev {
+    background: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(43,43,40,.04) 5px, rgba(43,43,40,.04) 10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--hand);
+    color: var(--ink-soft);
+    font-size: 11px;
+  }
+
+  /* 画廊视图 */
+  .gallery { display: flex; flex-direction: column; height: 100%; gap: 8px; }
+  .gal-main {
+    flex: 1;
+    border: 1.5px solid var(--line);
+    border-radius: 6px;
+    background:
+      repeating-linear-gradient(45deg, rgba(43,43,40,.07) 0 3px, transparent 3px 12px),
+      radial-gradient(circle at 30% 30%, rgba(46,108,246,.12), transparent 60%);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .gal-main .idx {
+    position: absolute;
+    top: 6px; left: 8px;
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--ink-soft);
+  }
+  .gal-film {
+    height: 44px;
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .gal-thumb {
+    width: 44px; height: 36px;
+    border: 1.5px solid var(--line);
+    border-radius: 4px;
+    background: repeating-linear-gradient(45deg, rgba(43,43,40,.08) 0 3px, transparent 3px 10px);
+    flex-shrink: 0;
+  }
+  .gal-thumb.on { border-width: 2px; border-color: var(--accent); box-shadow: 2px 2px 0 rgba(255,89,65,.3); }
+  .gal-arrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-soft);
+    padding: 0 4px;
+  }
+
+  /* ============ 覆盖层三件套 ============ */
+  .overlay-grid {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr;
+    gap: 16px;
+  }
+  .ov-frame {
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    background: #fdfcf8;
+    overflow: hidden;
+    position: relative;
+  }
+  .ov-frame .ov-head {
+    padding: 10px 14px;
+    border-bottom: 1.5px solid var(--line);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    background: rgba(43,43,40,.04);
+  }
+
+  /* 预览面板 */
+  .pv-body { display: flex; height: 300px; }
+  .pv-list {
+    width: 38%;
+    border-right: 1.5px solid var(--line);
+    padding: 8px;
+  }
+  .pv-view {
+    flex: 1;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .pv-canvas {
+    flex: 1;
+    border: 1.5px solid var(--line);
+    border-radius: 6px;
+    background:
+      repeating-linear-gradient(45deg, rgba(43,43,40,.06) 0 3px, transparent 3px 12px),
+      radial-gradient(circle at 60% 40%, rgba(255,197,49,.15), transparent 55%);
+    position: relative;
+  }
+  .pv-canvas .pin {
+    position: absolute;
+    top: 8px; right: 10px;
+    font-family: var(--hand);
+    font-size: 12px;
+    color: var(--accent);
+  }
+  .pv-meta {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--ink-soft);
+    display: flex;
+    gap: 14px;
+    line-height: 1.6;
+  }
+  .pv-zoom {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 10px;
+  }
+  .pv-zoom .zbtn {
+    width: 22px; height: 22px;
+    border: 1.2px solid var(--line);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    background: #fff;
+    font-size: 12px;
+  }
+
+  /* 快速过滤 */
+  .ff-overlay {
+    position: relative;
+    height: 300px;
+    background: #fdfcf8;
+    display: flex;
+    flex-direction: column;
+  }
+  .ff-input-row {
+    padding: 10px 12px;
+    border-bottom: 1.5px dashed rgba(43,43,40,.3);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: var(--hl);
+  }
+  .ff-input {
+    flex: 1;
+    height: 26px;
+    border: 1.5px solid var(--accent);
+    border-radius: 5px;
+    background: #fff;
+    font-family: var(--mono);
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    box-shadow: 2px 2px 0 rgba(255,89,65,.25);
+  }
+  .ff-input .caret { animation: blink 1s infinite; }
+  .ff-list { flex: 1; padding: 6px; overflow: hidden; }
+  .ff-tip {
+    padding: 8px 12px;
+    border-top: 1.5px dashed rgba(43,43,40,.3);
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--ink-soft);
+    display: flex;
+    gap: 12px;
+  }
+  .ff-tip kbd {
+    border: 1px solid rgba(43,43,40,.35);
+    border-radius: 3px;
+    padding: 0 4px;
+    background: #fff;
+    font-size: 9px;
+  }
+
+  /* Vim 键位帮助 */
+  .vim-overlay {
+    height: 300px;
+    background: var(--ink);
+    color: var(--paper);
+    display: flex;
+    flex-direction: column;
+    padding: 14px;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .vim-overlay::before {
+    content: "?";
+    position: absolute;
+    right: 18px; top: 6px;
+    font-family: var(--mono);
+    font-size: 64px;
+    opacity: 0.08;
+  }
+  .vim-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  .vim-key {
+    min-width: 34px;
+    text-align: center;
+    border: 1.2px solid rgba(253,252,248,.5);
+    border-radius: 4px;
+    padding: 2px 6px;
+    background: rgba(253,252,248,.08);
+  }
+  .vim-key.combo { border-color: var(--accent); color: #ff8a75; }
+  .vim-desc { font-size: 10.5px; opacity: 0.85; }
+  .vim-sep {
+    border-top: 1px dashed rgba(253,252,248,.25);
+    margin: 2px 0;
+  }
+
+  /* 标签管理 */
+  .tagm-grid {
+    max-width: 1180px;
+    margin: 16px auto 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .tag-tree { padding: 12px; }
+  .tt-node { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 5px; font-size: 12px; position: relative; }
+  .tt-node .indent { width: 16px; height: 12px; border-left: 1.2px solid rgba(43,43,40,.3); border-bottom: 1.2px solid rgba(43,43,40,.3); margin-right: 2px; }
+  .tt-node.on { background: var(--hl-2); }
+  .tt-node .cnt {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    color: var(--ink-soft);
+    border: 1px solid rgba(43,43,40,.25);
+    padding: 0 5px;
+    border-radius: 8px;
+  }
+  .tag-agg { padding: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .agg-card {
+    border: 1.2px solid var(--line);
+    border-radius: 6px;
+    padding: 8px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    background: #fff;
+    font-size: 11px;
+  }
+  .agg-card .from {
+    font-family: var(--mono);
+    font-size: 9px;
+    color: var(--ink-soft);
+    margin-left: auto;
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .agg-card.red { box-shadow: inset 3px 0 0 #ff5941; }
+  .agg-card.blue { box-shadow: inset 3px 0 0 #2e6cf6; }
+
+  /* ============ 响应式 ============ */
+  @media (max-width: 900px) {
+    .view-strip, .tagm-grid { grid-template-columns: 1fr 1fr; }
+    .overlay-grid { grid-template-columns: 1fr; }
+    .layout-strip { grid-template-columns: repeat(3, 1fr); }
+    .sidebar { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= 页头 ================= -->
+<header class="page-head">
+  <h1><span class="zx-mark">ZX</span> Zero Explorer · UI 线框图</h1>
+  <div class="meta">WIREFRAME v0.1 · 2026-08 · 5 页</div>
+</header>
+<p class="page-desc">
+  设计基调：<strong>纸上草图（Paper Sketch）</strong>风格 —— 网格纸背景、手写标注、单色墨线。
+  这是<b>结构线框</b>，不含视觉设计（颜色/字体/图标为占位）。所有交互标注用
+  <span style="font-family:var(--hand);color:var(--accent)">橙红手写体</span>表示。
+</p>
+
+<!-- ================= 1. 主窗口 ================= -->
+<div class="section-bar" id="s1">
+  <span class="num">01</span>
+  <h2>主窗口 · 双面板 + 独立标签</h2>
+  <span class="tail"></span>
+  <span class="note">日常默认布局</span>
+</div>
+
+<div class="frame" data-label="MAIN WINDOW / WIN+MAC/LINUX 一致">
+  <div class="win">
+    <!-- 标题栏 -->
+    <div class="titlebar">
+      <div class="win-controls"><span></span><span></span><span></span></div>
+      <div class="title">Zero Explorer — ~/work</div>
+      <div class="win-controls"><span></span><span></span><span></span></div>
+    </div>
+
+    <!-- 工具栏 -->
+    <div class="toolbar">
+      <span class="tb-btn accent">← 后退</span>
+      <span class="tb-btn">↑ 上级</span>
+      <span class="tb-btn">⟲ 刷新</span>
+      <div class="tb-crumb">
+        <b>work</b><span class="sep">/</span>personal_workspace<span class="sep">/</span>zero-explorer
+      </div>
+      <div class="tb-search">🔍 搜索… <kbd>Ctrl+F</kbd></div>
+      <span class="tb-btn">☰ 视图</span>
+      <span class="tb-btn">⚙ 设置</span>
+    </div>
+
+    <!-- 主体 -->
+    <div class="win-body">
+      <!-- 侧栏 -->
+      <div class="sidebar">
+        <div>
+          <div class="sb-label" style="margin-bottom:8px">位置</div>
+          <div class="sb-item on"><span class="ico"></span>zero-explorer</div>
+          <div class="sb-item"><span class="ico"></span>work</div>
+          <div class="sb-item"><span class="ico"></span>Downloads</div>
+          <div class="sb-item"><span class="ico"></span>Pictures</div>
+          <div class="sb-item"><span class="ico"></span>Documents</div>
+        </div>
+        <div>
+          <div class="sb-label" style="margin-bottom:8px">标签</div>
+          <div class="sb-item"><span class="sb-tag tag-red"></span>重要</div>
+          <div class="sb-item"><span class="sb-tag tag-blue"></span>进行中</div>
+          <div class="sb-item"><span class="sb-tag tag-yellow"></span>待读</div>
+          <div class="sb-item"><span class="sb-tag tag-green"></span>归档</div>
+        </div>
+        <div>
+          <div class="sb-label" style="margin-bottom:8px">布局</div>
+          <div class="sb-item"><span class="ico"></span>保存的布局 A</div>
+          <div class="sb-item"><span class="ico"></span>保存的布局 B</div>
+        </div>
+      </div>
+
+      <!-- 面板 1 -->
+      <div class="panes">
+        <div class="pane">
+          <div class="pane-tabs">
+            <div class="pane-tab on">📁 src<span class="x">×</span></div>
+            <div class="pane-tab">📁 docs</div>
+            <div class="pane-tab"><span class="dot"></span>编辑中</div>
+            <div class="newtab">+</div>
+          </div>
+          <div class="pane-list">
+            <div class="cols-head">
+              <span class="c-name">名称</span>
+              <span class="c-size">大小</span>
+              <span class="c-date">修改</span>
+              <span class="c-tag">标签</span>
+            </div>
+            <div class="frow folder"><span class="f-ico"></span><span class="f-name">competitive_analysis.md</span><span class="f-size">8.4KB</span><span class="f-date">08-31</span><span class="f-tags"><i class="tag-blue"></i></span></div>
+            <div class="frow folder cursor sel"><span class="f-ico"></span><span class="f-name">product_vision.md</span><span class="f-size">2.2KB</span><span class="f-date">08-31</span><span class="f-tags"><i class="tag-red"></i></span></div>
+            <div class="frow"><span class="f-ico"></span><span class="f-name">wireframes/</span><span class="f-size">—</span><span class="f-date">08-31</span><span class="f-tags"></span></div>
+            <div class="frow"><span class="f-ico"></span><span class="f-name">README.md</span><span class="f-size">0.3KB</span><span class="f-date">08-30</span><span class="f-tags"><i class="tag-yellow"></i></span></div>
+          </div>
+        </div>
+
+        <!-- 面板 2 -->
+        <div class="pane">
+          <div class="pane-tabs">
+            <div class="pane-tab">📁 wireframes</div>
+            <div class="pane-tab on">🔍 搜索: 设计 <span class="x">×</span></div>
+            <div class="newtab">+</div>
+          </div>
+          <div class="pane-list">
+            <div class="cols-head">
+              <span class="c-name">名称</span>
+              <span class="c-size">大小</span>
+              <span class="c-date">修改</span>
+              <span class="c-tag">标签</span>
+            </div>
+            <div class="frow match"><span class="f-ico"></span><span class="f-name">design-tokens.md</span><span class="f-size">1.1KB</span><span class="f-date">08-30</span><span class="f-tags"><i class="tag-blue"></i></span></div>
+            <div class="frow match"><span class="f-ico"></span><span class="f-name">ui-wireframe.html</span><span class="f-size">44KB</span><span class="f-date">08-31</span><span class="f-tags"></span></div>
+            <div class="frow match"><span class="f-ico"></span><span class="f-name">设计规范.pdf</span><span class="f-size">2.4MB</span><span class="f-date">08-29</span><span class="f-tags"><i class="tag-red"></i></span></div>
+            <div class="frow"><span class="f-ico"></span><span class="f-name">原型.fig</span><span class="f-size">12MB</span><span class="f-date">08-29</span><span class="f-tags"><i class="tag-blue"></i></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 拖拽示意 -->
+    <div class="ghost-tab">📑 ui-wireframe.html</div>
+    <div class="drop-zone"></div>
+
+    <!-- 状态栏 -->
+    <div class="statusbar">
+      <span class="seg"><b>18</b> 项 · <b>3</b> 选中</span>
+      <span class="seg">双面板</span>
+      <span class="grow"></span>
+      <span class="seg">Vim <span class="vim">NORMAL</span></span>
+      <span class="seg">UTF-8</span>
+    </div>
+  </div>
+</div>
+
+<div class="layout-strip">
+  <div class="layout-card">
+    <div class="lc-grid g1"><div></div></div>
+    <div class="lc-name">单面板</div>
+  </div>
+  <div class="layout-card">
+    <div class="lc-grid g2v"><div></div><div></div></div>
+    <div class="lc-name">双面板 · 竖切</div>
+  </div>
+  <div class="layout-card">
+    <div class="lc-grid g2h"><div></div><div></div></div>
+    <div class="lc-name">双面板 · 横切</div>
+  </div>
+  <div class="layout-card on">
+    <div class="lc-grid g3"><div class="span2 on"></div><div></div><div></div></div>
+    <div class="lc-name">三面板</div>
+  </div>
+  <div class="layout-card">
+    <div class="lc-grid g4"><div></div><div></div><div></div><div></div></div>
+    <div class="lc-name">四面板</div>
+  </div>
+</div>
+
+<!-- ================= 2. 视图模式 ================= -->
+<div class="section-bar" id="s2">
+  <span class="num">02</span>
+  <h2>四种视图模式</h2>
+  <span class="tail"></span>
+  <span class="note">每面板独立切换</span>
+</div>
+
+<div class="view-strip">
+  <!-- 列表 -->
+  <div class="view-card">
+    <div class="vc-head">详细列表 <em>Shift+1</em></div>
+    <div class="vc-body mini-list">
+      <div class="frow folder"><span class="f-ico"></span><span class="f-name">src/</span><span class="f-size">—</span></div>
+      <div class="frow sel"><span class="f-ico"></span><span class="f-name">main.rs</span><span class="f-size">4.2KB</span></div>
+      <div class="frow"><span class="f-ico"></span><span class="f-name">app.rs</span><span class="f-size">12KB</span></div>
+      <div class="frow"><span class="f-ico"></span><span class="f-name">ui.rs</span><span class="f-size">8KB</span></div>
+      <div class="frow"><span class="f-ico"></span><span class="f-name">mod.rs</span><span class="f-size">0.2KB</span></div>
+      <div class="frow"><span class="f-ico"></span><span class="f-name">theme.rs</span><span class="f-size">1.4KB</span></div>
+    </div>
+  </div>
+
+  <!-- 图标 -->
+  <div class="view-card">
+    <div class="vc-head">图标网格 <em>Shift+2</em></div>
+    <div class="vc-body">
+      <div class="icon-grid">
+        <div class="ig-item folder"><span class="box"></span><span class="cap">src</span></div>
+        <div class="ig-item img sel"><span class="box"></span><span class="cap">logo.png</span></div>
+        <div class="ig-item"><span class="box"></span><span class="cap">main.rs</span></div>
+        <div class="ig-item"><span class="box"></span><span class="cap">app.rs</span></div>
+        <div class="ig-item folder"><span class="box"></span><span class="cap">tests</span></div>
+        <div class="ig-item img"><span class="box"></span><span class="cap">icon.svg</span></div>
+        <div class="ig-item"><span class="box"></span><span class="cap">ui.rs</span></div>
+        <div class="ig-item"><span class="box"></span><span class="cap">mod.rs</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 分栏 -->
+  <div class="view-card">
+    <div class="vc-head">分栏视图 <em>Shift+3</em></div>
+    <div class="vc-body">
+      <div class="colview">
+        <div class="cv-col">
+          <div class="cv-item">work/</div>
+          <div class="cv-item on">personal<span class="tri">▸</span></div>
+          <div class="cv-item">archive/</div>
+          <div class="cv-item">misc/</div>
+        </div>
+        <div class="cv-col">
+          <div class="cv-item on">zero-explorer<span class="tri">▸</span></div>
+          <div class="cv-item">other-project/</div>
+          <div class="cv-item">notes/</div>
+        </div>
+        <div class="cv-col cv-prev">右侧显示<br>选中预览</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 画廊 -->
+  <div class="view-card">
+    <div class="vc-head">画廊视图 <em>Shift+4</em></div>
+    <div class="vc-body">
+      <div class="gallery">
+        <div class="gal-main"><span class="idx">07 / 24</span></div>
+        <div class="gal-film">
+          <span class="gal-arrow">◀</span>
+          <div class="gal-thumb"></div>
+          <div class="gal-thumb"></div>
+          <div class="gal-thumb on"></div>
+          <div class="gal-thumb"></div>
+          <div class="gal-thumb"></div>
+          <span class="gal-arrow">▶</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 3. 覆盖层 ================= -->
+<div class="section-bar" id="s3">
+  <span class="num">03</span>
+  <h2>预览 · 过滤 · Vim 帮助</h2>
+  <span class="tail"></span>
+  <span class="note">空格 / Ctrl+F / ?</span>
+</div>
+
+<div class="overlay-grid">
+  <!-- 预览 -->
+  <div class="ov-frame">
+    <div class="ov-head"><span>QUICK PREVIEW</span><span>空格</span></div>
+    <div class="pv-body">
+      <div class="pv-list">
+        <div class="frow sel"><span class="f-ico"></span><span class="f-name">shot-01.png</span></div>
+        <div class="frow"><span class="f-ico"></span><span class="f-name">shot-02.png</span></div>
+        <div class="frow"><span class="f-ico"></span><span class="f-name">shot-03.png</span></div>
+      </div>
+      <div class="pv-view">
+        <div class="pv-canvas"><span class="pin">↓ 快速预览</span></div>
+        <div class="pv-meta"><span>2560×1440</span><span>PNG</span><span>1.2MB</span></div>
+        <div class="pv-zoom">
+          <span class="zbtn">−</span>
+          <span>100%</span>
+          <span class="zbtn">+</span>
+          <span style="margin-left:auto;color:var(--ink-soft)">j/k 上下翻</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 过滤 -->
+  <div class="ov-frame">
+    <div class="ov-head"><span>QUICK FILTER</span><span>Ctrl+F</span></div>
+    <div class="ff-overlay">
+      <div class="ff-input-row">
+        <div class="ff-input">设计<span class="caret">▏</span></div>
+      </div>
+      <div class="ff-list">
+        <div class="frow match"><span class="f-ico"></span><span class="f-name">设计规范.pdf</span></div>
+        <div class="frow match"><span class="f-ico"></span><span class="f-name">design-tokens.md</span></div>
+        <div class="frow match"><span class="f-ico"></span><span class="f-name">ui-wireframe.html</span></div>
+        <div class="frow"><span class="f-ico"></span><span class="f-name">原型.fig</span></div>
+      </div>
+      <div class="ff-tip">
+        <span><kbd>Esc</kbd> 退出</span>
+        <span><kbd>↑↓</kbd> 选择</span>
+        <span><kbd>Enter</kbd> 进入</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vim -->
+  <div class="ov-frame">
+    <div class="ov-head" style="border-color:rgba(253,252,248,.3);color:var(--paper);background:rgba(0,0,0,.2)"><span>VIM MODE</span><span>?</span></div>
+    <div class="vim-overlay">
+      <div class="vim-row"><span class="vim-key">j/k</span><span class="vim-desc">上下移动</span></div>
+      <div class="vim-row"><span class="vim-key">gg/G</span><span class="vim-desc">跳首/跳尾</span></div>
+      <div class="vim-row"><span class="vim-key">v</span><span class="vim-desc">进入可视选择（扩选）</span></div>
+      <div class="vim-sep"></div>
+      <div class="vim-row"><span class="vim-key">y</span><span class="vim-desc">复制 (yank)</span></div>
+      <div class="vim-row"><span class="vim-key">x</span><span class="vim-desc">剪切</span></div>
+      <div class="vim-row"><span class="vim-key">p</span><span class="vim-desc">粘贴</span></div>
+      <div class="vim-sep"></div>
+      <div class="vim-row"><span class="vim-key combo">wv</span><span class="vim-desc">竖切分屏</span></div>
+      <div class="vim-row"><span class="vim-key combo">wh</span><span class="vim-desc">横切分屏</span></div>
+      <div class="vim-row"><span class="vim-key combo">e</span><span class="vim-desc">进入侧栏导航</span></div>
+      <div class="vim-row" style="margin-top:auto"><span class="vim-key">Esc</span><span class="vim-desc">返回 NORMAL</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 4. 标签系统 ================= -->
+<div class="section-bar" id="s4">
+  <span class="num">04</span>
+  <h2>标签树 + 聚合视图</h2>
+  <span class="tail"></span>
+  <span class="note">标签是组织层，不动原文件</span>
+</div>
+
+<div class="tagm-grid">
+  <div class="frame" data-label="TAG TREE">
+    <div class="tag-tree">
+      <div class="tt-node on"><span class="sb-tag tag-red"></span>重要 <span class="cnt">12</span></div>
+      <div class="tt-node"><span class="indent"></span><span class="sb-tag tag-yellow"></span>合同 <span class="cnt">4</span></div>
+      <div class="tt-node"><span class="indent"></span><span class="sb-tag tag-yellow"></span>发票 <span class="cnt">8</span></div>
+      <div class="tt-node"><span class="sb-tag tag-blue"></span>进行中 <span class="cnt">23</span></div>
+      <div class="tt-node"><span class="sb-tag tag-green"></span>归档 <span class="cnt">156</span></div>
+    </div>
+  </div>
+
+  <div class="frame" data-label="AGGREGATED VIEW">
+    <div class="tag-agg">
+      <div class="agg-card red"><span class="f-ico"></span>合同-2026.pdf<span class="from">~/Documents</span></div>
+      <div class="agg-card red"><span class="f-ico"></span>合同-2025.pdf<span class="from">~/Archive</span></div>
+      <div class="agg-card blue"><span class="f-ico"></span>product_vision.md<span class="from">~/work/zx</span></div>
+      <div class="agg-card blue"><span class="f-ico"></span>competitive_analysis.md<span class="from">~/work/zx</span></div>
+      <div class="agg-card blue"><span class="f-ico"></span>ui-wireframe.html<span class="from">~/work/zx</span></div>
+      <div class="agg-card blue"><span class="f-ico"></span>roadmap.md<span class="from">~/notes</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= 5. 设计说明 ================= -->
+<div class="section-bar" id="s5">
+  <span class="num">05</span>
+  <h2>设计原则标注</h2>
+  <span class="tail"></span>
+</div>
+
+<div style="max-width:1180px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+  <div class="frame" data-label="LAYOUT TOKENS" style="padding:20px">
+    <div style="font-family:var(--mono);font-size:12px;line-height:2.2">
+      <div>面板最小宽度 · <b style="color:var(--accent)">320px</b>（低于则合并标签）</div>
+      <div>侧栏宽度 · <b style="color:var(--accent)">190px</b>（可折叠 Ctrl+B）</div>
+      <div>行高（列表） · <b style="color:var(--accent)">28px</b></div>
+      <div>状态栏 · <b style="color:var(--accent)">30px</b> · Vim 模式指示常驻</div>
+      <div>键盘优先 · 所有操作有等价快捷键</div>
+  </div>
+  </div>
+  <div class="frame" data-label="KEYBOARD-FIRST" style="padding:20px">
+    <div style="font-family:var(--mono);font-size:12px;line-height:2.2">
+      <div>分屏 · <b style="color:var(--accent)">wv / wh</b>（Vim 模式）或拖标签到边缘</div>
+      <div>切换面板 · <b style="color:var(--accent)">Ctrl+h/l</b> 或 <b style="color:var(--accent)">wt</b> 环形</div>
+      <div>新标签 · <b style=" 间color:var(--accent)">Ctrl+t</b>，关 <b style="color:var(--accent)">Ctrl+w</b></div>
+      <div>快速过滤 · <b style="color:var(--accent)">Ctrl+F</b>，打字即筛</div>
+      <div>命令面板 · <b style="color:var(--accent)">Ctrl+Shift+P</b>（规划中）</div>
+    </div>
+  </div>
+</div>
+
+<div style="max-width:1180px;margin:48px auto 0;text-align:center;font-family:var(--hand);color:var(--ink-soft);font-size:14px">
+  ↑ 以上为结构线框 · 下一步：高保真视觉稿 → 交互原型 → GPU 渲染实现
+</div>
+
+</body>
+</html>
