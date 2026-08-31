@@ -2244,11 +2244,18 @@ pub fn init() {
             const sidebar = document.getElementById('sidebar');
             const main = layout.querySelector('.layout-main');
             const text = document.getElementById('sidebarToggleText');
+            const isRight = layout.classList.contains('sidebar-right');
             const isVisible = layout.classList.toggle('sidebar-visible');
             text.textContent = isVisible ? '隐藏侧边栏' : '显示侧边栏';
             
-            // 隐藏时恢复 DOM 顺序，避免 main 被放到 0px 列
-            if (!isVisible) {
+            // 根据当前位置恢复/交换 DOM 顺序
+            if (isVisible) {
+                if (isRight) {
+                    layout.insertBefore(main, sidebar);
+                } else {
+                    layout.insertBefore(sidebar, main);
+                }
+            } else {
                 layout.insertBefore(sidebar, main);
             }
         }
@@ -2562,19 +2569,18 @@ pub fn init() {
             const sidebar = document.getElementById('sidebar');
             const handle = document.getElementById('sidebarResizeHandle');
             const main = layout.querySelector('.layout-main');
+            const isVisible = layout.classList.contains('sidebar-visible');
             
             if (position === 'right') {
                 layout.classList.add('sidebar-right');
                 sidebar.classList.add('sidebar-right');
                 handle.classList.add('sidebar-right');
-                // Move sidebar after main content
-                layout.insertBefore(main, sidebar);
+                if (isVisible) layout.insertBefore(main, sidebar);
             } else {
                 layout.classList.remove('sidebar-right');
                 sidebar.classList.remove('sidebar-right');
                 handle.classList.remove('sidebar-right');
-                // Move sidebar before main content
-                layout.insertBefore(sidebar, main);
+                if (isVisible) layout.insertBefore(sidebar, main);
             }
             
             // 更新按钮选中状态
