@@ -222,6 +222,7 @@
             overflow-x: hidden;
             transition: opacity 0.2s ease;
             position: relative;
+            min-width: 0;
         }
 
         .layout-sidebar:not(.sidebar-right) {
@@ -231,22 +232,6 @@
         .layout-sidebar.sidebar-right {
             border-left: 1px solid var(--border);
             border-right: none;
-        }
-
-        .full-layout.sidebar-visible .layout-sidebar {
-            grid-column: 1;
-        }
-
-        .full-layout.sidebar-visible.sidebar-right .layout-sidebar {
-            grid-column: 2;
-        }
-
-        .full-layout.sidebar-visible .layout-main {
-            grid-column: 2;
-        }
-
-        .full-layout.sidebar-visible.sidebar-right .layout-main {
-            grid-column: 1;
         }
 
         .full-layout:not(.sidebar-visible) .layout-sidebar { opacity: 0; pointer-events: none; }
@@ -2569,15 +2554,20 @@ pub fn init() {
             const layout = document.getElementById('mainLayout');
             const sidebar = document.getElementById('sidebar');
             const handle = document.getElementById('sidebarResizeHandle');
+            const main = layout.querySelector('.layout-main');
             
             if (position === 'right') {
                 layout.classList.add('sidebar-right');
                 sidebar.classList.add('sidebar-right');
                 handle.classList.add('sidebar-right');
+                // Move sidebar after main content
+                layout.insertBefore(main, sidebar);
             } else {
                 layout.classList.remove('sidebar-right');
                 sidebar.classList.remove('sidebar-right');
                 handle.classList.remove('sidebar-right');
+                // Move sidebar before main content
+                layout.insertBefore(sidebar, main);
             }
             
             // 更新按钮选中状态
