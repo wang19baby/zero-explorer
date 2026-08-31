@@ -531,6 +531,69 @@
             display: none;
         }
 
+        /* Address Bar Dropdown */
+        .address-bar-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: var(--bg-base);
+            border: 1px solid var(--border);
+            border-radius: 0 0 var(--radius-md) var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .address-bar-dropdown.visible { display: block; }
+
+        .address-dropdown-section {
+            padding: var(--space-2) var(--space-3);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .address-dropdown-section:last-child { border-bottom: none; }
+
+        .address-dropdown-label {
+            font-size: 11px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: var(--space-1);
+        }
+
+        .address-dropdown-item {
+            padding: var(--space-2) var(--space-2);
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            border-radius: var(--radius-sm);
+        }
+
+        .address-dropdown-item:hover { background: var(--primary-light); }
+
+        .address-dropdown-item .tab-name {
+            font-weight: 500;
+            min-width: 60px;
+        }
+
+        .address-dropdown-item .tab-path {
+            font-family: 'Cascadia Code', monospace;
+            font-size: 12px;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .panel-breadcrumb-wrapper {
+            position: relative;
+        }
+
         .panel-tabs {
             display: flex;
             gap: 1px;
@@ -1017,17 +1080,40 @@
                 <!-- Left Panel -->
                 <div class="wireframe-panel">
                     <!-- 面包屑在 Tab 上方 -->
-                    <div class="panel-breadcrumb">
-                        <div class="breadcrumb" id="breadcrumb1">
-                            <span class="breadcrumb-item">D:</span>
-                            <span class="breadcrumb-sep">›</span>
-                            <span class="breadcrumb-item">work_space</span>
-                            <span class="breadcrumb-sep">›</span>
-                            <span class="breadcrumb-item">personal_workspace</span>
-                            <span class="breadcrumb-sep">›</span>
-                            <span class="breadcrumb-item current">src</span>
+                    <div class="panel-breadcrumb-wrapper">
+                        <div class="panel-breadcrumb">
+                            <div class="breadcrumb" id="breadcrumb1">
+                                <span class="breadcrumb-item">D:</span>
+                                <span class="breadcrumb-sep">›</span>
+                                <span class="breadcrumb-item">work_space</span>
+                                <span class="breadcrumb-sep">›</span>
+                                <span class="breadcrumb-item">personal_workspace</span>
+                                <span class="breadcrumb-sep">›</span>
+                                <span class="breadcrumb-item current">src</span>
+                            </div>
+                            <input type="text" class="breadcrumb-input" id="breadcrumbInput1" placeholder="输入路径...">
                         </div>
-                        <input type="text" class="breadcrumb-input" id="breadcrumbInput1" placeholder="输入路径...">
+                        <div class="address-bar-dropdown" id="addressDropdown1">
+                            <div class="address-dropdown-section">
+                                <div class="address-dropdown-label">📑 已打开的 Tab</div>
+                                <div class="address-dropdown-item" onclick="jumpToTab('src', 'D:\\work_space\\...\\src')">
+                                    <span class="tab-name">面板1:</span>
+                                    <span class="tab-path">src (D:\work_space\...\src)</span>
+                                </div>
+                                <div class="address-dropdown-item" onclick="jumpToTab('target', 'D:\\work_space\\...\\target')">
+                                    <span class="tab-name">面板2:</span>
+                                    <span class="tab-path">target (D:\work_space\...\target)</span>
+                                </div>
+                                <div class="address-dropdown-item" onclick="jumpToTab('2026', 'E:\\backup\\2026')">
+                                    <span class="tab-name">面板3:</span>
+                                    <span class="tab-path">2026 (E:\backup\2026)</span>
+                                </div>
+                                <div class="address-dropdown-item" onclick="jumpToTab('Desktop', 'C:\\Users\\wang\\Desktop')">
+                                    <span class="tab-name">面板4:</span>
+                                    <span class="tab-path">Desktop (C:\Users\wang\Desktop)</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <!-- Tab 在面包屑下方 -->
                     <div class="panel-tabs" onclick="addTab(event, this)">
@@ -2231,12 +2317,58 @@ pub fn init() {
                 e.preventDefault();
                 toggleSidebar();
             }
-            // Esc 关闭预览
+            // Ctrl+L 激活地址栏
+            if (e.ctrlKey && e.code === 'KeyL') {
+                e.preventDefault();
+                activateAddressBar();
+            }
+            // Esc 关闭预览或地址栏
             if (e.code === 'Escape') {
                 const overlay = document.getElementById('previewOverlay');
                 if (overlay.classList.contains('visible')) {
                     togglePreview();
                 }
+                closeAllAddressDropdowns();
+            }
+        });
+
+        // 激活地址栏
+        function activateAddressBar() {
+            const dropdown = document.getElementById('addressDropdown1');
+            const breadcrumb = document.getElementById('breadcrumb1');
+            const input = document.getElementById('breadcrumbInput1');
+            
+            // 显示下拉菜单
+            dropdown.classList.add('visible');
+            
+            // 同时切换到输入模式
+            breadcrumb.style.display = 'none';
+            input.style.display = 'block';
+            input.value = Array.from(breadcrumb.querySelectorAll('.breadcrumb-item'))
+                .map(item => item.textContent)
+                .join('\\');
+            input.focus();
+            input.select();
+        }
+
+        // 关闭所有地址栏下拉
+        function closeAllAddressDropdowns() {
+            document.querySelectorAll('.address-bar-dropdown').forEach(d => {
+                d.classList.remove('visible');
+            });
+        }
+
+        // 跳转到 Tab
+        function jumpToTab(name, path) {
+            console.log('跳转到 Tab:', name, path);
+            closeAllAddressDropdowns();
+            // 在实际应用中，这里会切换到对应的面板和标签页
+        }
+
+        // 点击其他地方关闭下拉菜单
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.panel-breadcrumb-wrapper')) {
+                closeAllAddressDropdowns();
             }
         });
 
