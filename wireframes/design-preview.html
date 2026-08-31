@@ -1246,6 +1246,39 @@
             <!-- Status Bar -->
             <div class="layout-statusbar">
                 <div class="statusbar-left">
+                    <!-- Space 切换 -->
+                    <div class="space-toggle" id="spaceToggle">
+                        <div class="space-btn active" data-space="work" onclick="switchSpace('work')">Work</div>
+                        <div class="space-btn" data-space="dev" onclick="switchSpace('dev')">Dev</div>
+                        <div class="space-btn" data-space="game" onclick="switchSpace('game')">Game</div>
+                        <div class="space-add" onclick="showSpaceDropdown()" title="管理空间">+</div>
+                    </div>
+                    <!-- Space 下拉菜单 -->
+                    <div class="space-dropdown" id="spaceDropdown">
+                        <div class="space-dropdown-header">
+                            <span>空间管理</span>
+                            <span style="cursor: pointer;" onclick="hideSpaceDropdown()">×</span>
+                        </div>
+                        <div class="space-dropdown-item active" data-space="work" onclick="switchSpace('work')">
+                            <span class="space-icon" style="background: var(--primary); color: white;">W</span>
+                            <span class="space-name">Work</span>
+                            <span class="space-delete" onclick="deleteSpace('work', event)">×</span>
+                        </div>
+                        <div class="space-dropdown-item" data-space="dev" onclick="switchSpace('dev')">
+                            <span class="space-icon" style="background: var(--success); color: white;">D</span>
+                            <span class="space-name">Dev</span>
+                            <span class="space-delete" onclick="deleteSpace('dev', event)">×</span>
+                        </div>
+                        <div class="space-dropdown-item" data-space="game" onclick="switchSpace('game')">
+                            <span class="space-icon" style="background: var(--warning); color: white;">G</span>
+                            <span class="space-name">Game</span>
+                            <span class="space-delete" onclick="deleteSpace('game', event)">×</span>
+                        </div>
+                        <div class="space-dropdown-footer">
+                            <span style="cursor: pointer; color: var(--primary);" onclick="createSpace()">+ 新建空间</span>
+                        </div>
+                    </div>
+                    <span style="color: var(--border);">|</span>
                     <span id="statusbarInfo">4 个面板 · 1 个选中</span>
                     <span style="color: var(--border);">|</span>
                     <span class="statusbar-path" id="statusbarPath" onclick="copyPath()" title="点击复制路径">D:\work_space\personal_workspace\zero-explorer</span>
@@ -1323,39 +1356,6 @@
                                 <rect x="6" y="1" width="4" height="14" rx="1"/>
                                 <rect x="11" y="1" width="4" height="14" rx="1"/>
                             </svg>
-                        </div>
-                    </div>
-                    <span style="color: var(--border);">|</span>
-                    <!-- Space 切换 -->
-                    <div class="space-toggle" id="spaceToggle">
-                        <div class="space-btn active" data-space="work" onclick="switchSpace('work')">Work</div>
-                        <div class="space-btn" data-space="dev" onclick="switchSpace('dev')">Dev</div>
-                        <div class="space-btn" data-space="game" onclick="switchSpace('game')">Game</div>
-                        <div class="space-add" onclick="showSpaceDropdown()" title="管理空间">+</div>
-                    </div>
-                    <!-- Space 下拉菜单 -->
-                    <div class="space-dropdown" id="spaceDropdown">
-                        <div class="space-dropdown-header">
-                            <span>空间管理</span>
-                            <span style="cursor: pointer;" onclick="hideSpaceDropdown()">×</span>
-                        </div>
-                        <div class="space-dropdown-item active" data-space="work" onclick="switchSpace('work')">
-                            <span class="space-icon" style="background: var(--primary); color: white;">W</span>
-                            <span class="space-name">Work</span>
-                            <span class="space-delete" onclick="deleteSpace('work', event)">×</span>
-                        </div>
-                        <div class="space-dropdown-item" data-space="dev" onclick="switchSpace('dev')">
-                            <span class="space-icon" style="background: var(--success); color: white;">D</span>
-                            <span class="space-name">Dev</span>
-                            <span class="space-delete" onclick="deleteSpace('dev', event)">×</span>
-                        </div>
-                        <div class="space-dropdown-item" data-space="game" onclick="switchSpace('game')">
-                            <span class="space-icon" style="background: var(--warning); color: white;">G</span>
-                            <span class="space-name">Game</span>
-                            <span class="space-delete" onclick="deleteSpace('game', event)">×</span>
-                        </div>
-                        <div class="space-dropdown-footer">
-                            <span style="cursor: pointer; color: var(--primary);" onclick="createSpace()">+ 新建空间</span>
                         </div>
                     </div>
                     <span style="color: var(--border);">|</span>
