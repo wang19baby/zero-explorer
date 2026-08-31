@@ -231,7 +231,22 @@
         .layout-sidebar.sidebar-right {
             border-left: 1px solid var(--border);
             border-right: none;
+        }
+
+        .full-layout.sidebar-visible .layout-sidebar {
+            grid-column: 1;
+        }
+
+        .full-layout.sidebar-visible.sidebar-right .layout-sidebar {
             grid-column: 2;
+        }
+
+        .full-layout.sidebar-visible .layout-main {
+            grid-column: 2;
+        }
+
+        .full-layout.sidebar-visible.sidebar-right .layout-main {
+            grid-column: 1;
         }
 
         .full-layout:not(.sidebar-visible) .layout-sidebar { opacity: 0; pointer-events: none; }
