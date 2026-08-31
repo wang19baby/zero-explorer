@@ -210,6 +210,7 @@
             border-radius: var(--radius-lg);
             overflow: visible;
             transition: grid-template-columns 0.2s ease;
+            position: relative;
         }
 
         .full-layout.sidebar-visible { grid-template-columns: var(--sidebar-width) 1fr; }
@@ -236,13 +237,13 @@
         .full-layout:not(.sidebar-visible) .layout-sidebar { opacity: 0; pointer-events: none; }
         .full-layout.sidebar-visible .layout-sidebar { opacity: 1; pointer-events: auto; }
 
-        /* Sidebar Resize Handle - positioned at scrollbar right */
+        /* Sidebar Resize Handle - positioned between sidebar and main content */
         .sidebar-resize-handle {
             position: absolute;
             top: 0;
-            right: 0;
+            left: var(--sidebar-width);
             width: 4px;
-            height: 100%;
+            height: calc(100% - 33px);
             cursor: col-resize;
             background: transparent;
             transition: background 0.15s ease;
@@ -252,6 +253,11 @@
         .sidebar-resize-handle:hover,
         .sidebar-resize-handle.active {
             background: var(--primary);
+        }
+
+        .sidebar-resize-handle.sidebar-right {
+            left: auto;
+            right: var(--sidebar-width);
         }
 
         .sidebar-resize-tooltip {
@@ -276,39 +282,45 @@
             opacity: 1;
         }
 
-        /* Sidebar Context Menu */
-        .sidebar-context-menu {
-            position: absolute;
-            top: 40px;
-            left: 10px;
-            background: var(--bg-base);
+        .sidebar-resize-handle.sidebar-right .sidebar-resize-tooltip {
+            left: 50%;
+            right: auto;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Sidebar Position Toggle */
+        .sidebar-pos-toggle {
+            display: inline-flex;
             border: 1px solid var(--border);
             border-radius: var(--radius-md);
-            box-shadow: var(--shadow-lg);
-            padding: var(--space-2) 0;
-            z-index: 100;
-            display: none;
-            min-width: 120px;
+            overflow: hidden;
         }
 
-        .sidebar-context-menu.visible { display: block; }
-
-        .sidebar-context-menu-item {
-            padding: var(--space-2) var(--space-3);
-            font-size: 13px;
+        .sidebar-pos-btn {
+            background: var(--bg-secondary);
+            border: none;
+            padding: 4px 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
             cursor: pointer;
+            transition: all 0.15s ease;
             display: flex;
             align-items: center;
-            gap: var(--space-2);
+            gap: 4px;
         }
 
-        .sidebar-context-menu-item:hover { background: var(--primary-light); }
+        .sidebar-pos-btn + .sidebar-pos-btn {
+            border-left: 1px solid var(--border);
+        }
 
-        .sidebar-context-menu-item.active::before {
-            content: '✓';
-            position: absolute;
-            left: 8px;
-            color: var(--primary);
+        .sidebar-pos-btn:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .sidebar-pos-btn.active {
+            background: var(--primary);
+            color: white;
         }
 
         .layout-main { 
@@ -1103,6 +1115,10 @@
             <span style="color: var(--text-tertiary); font-size: 13px;">
                 <span class="shortcut-hint">Ctrl</span>+<span class="shortcut-hint">Shift</span>+<span class="shortcut-hint">B</span>
             </span>
+            <div class="sidebar-pos-toggle" id="sidebarPosToggle">
+                <button class="sidebar-pos-btn active" data-pos="left" onclick="setSidebarPosition('left')" title="侧边栏在左侧">◧ 左</button>
+                <button class="sidebar-pos-btn" data-pos="right" onclick="setSidebarPosition('right')" title="侧边栏在右侧">◨ 右</button>
+            </div>
             <button class="btn btn-secondary" onclick="togglePreview()">预览面板</button>
             <span style="color: var(--text-tertiary); font-size: 13px;">
                 <span class="shortcut-hint">Space</span>
@@ -1114,11 +1130,7 @@
             <div class="layout-sidebar" id="sidebar">
                 <div class="sidebar">
                     <div class="sidebar-section">
-                        <div class="sidebar-title" oncontextmenu="showSidebarContextMenu(event)" style="cursor: context-menu;">此电脑 ▾</div>
-                        <div class="sidebar-context-menu" id="sidebarContextMenu">
-                            <div class="sidebar-context-menu-item active" onclick="setSidebarPosition('left')">左侧</div>
-                            <div class="sidebar-context-menu-item" onclick="setSidebarPosition('right')">右侧</div>
-                        </div>
+                        <div class="sidebar-title">此电脑 ▾</div>
                         <div class="sidebar-item">
                             <span>💾 本地磁盘 (C:)</span>
                         </div>
@@ -1162,10 +1174,12 @@
                         <div class="sidebar-item" data-space="dev" onclick="switchSpace('dev')">💻 Dev</div>
                         <div class="sidebar-item" style="color: var(--primary);" onclick="createSpace()">+ 新建空间</div>
                     </div>
-                    <div class="sidebar-resize-handle" id="sidebarResizeHandle">
-                        <div class="sidebar-resize-tooltip" id="sidebarResizeTooltip">200px</div>
-                    </div>
                 </div>
+            </div>
+
+            <!-- Sidebar Resize Handle (outside sidebar to avoid overflow clip) -->
+            <div class="sidebar-resize-handle" id="sidebarResizeHandle">
+                <div class="sidebar-resize-tooltip" id="sidebarResizeTooltip">200px</div>
             </div>
 
             <!-- Main Content - Dual Panel -->
@@ -2484,6 +2498,10 @@ pub fn init() {
                 tooltip.textContent = Math.round(width) + 'px';
             }
             
+            function isSidebarRight() {
+                return sidebar.classList.contains('sidebar-right');
+            }
+            
             handle.addEventListener('mousedown', function(e) {
                 isDragging = true;
                 startX = e.clientX;
@@ -2503,7 +2521,13 @@ pub fn init() {
                 if (!isDragging) return;
                 
                 const deltaX = e.clientX - startX;
-                let newWidth = startWidth + deltaX;
+                let newWidth;
+                
+                if (isSidebarRight()) {
+                    newWidth = startWidth - deltaX;
+                } else {
+                    newWidth = startWidth + deltaX;
+                }
                 
                 newWidth = Math.max(MIN_WIDTH, Math.min(MAX_WIDTH, newWidth));
                 
@@ -2522,41 +2546,26 @@ pub fn init() {
         })();
 
         // 侧边栏位置切换
-        function showSidebarContextMenu(e) {
-            e.preventDefault();
-            const menu = document.getElementById('sidebarContextMenu');
-            menu.style.left = e.offsetX + 'px';
-            menu.classList.add('visible');
-        }
-
         function setSidebarPosition(position) {
             const layout = document.getElementById('mainLayout');
             const sidebar = document.getElementById('sidebar');
-            const menu = document.getElementById('sidebarContextMenu');
+            const handle = document.getElementById('sidebarResizeHandle');
             
             if (position === 'right') {
                 layout.classList.add('sidebar-right');
                 sidebar.classList.add('sidebar-right');
+                handle.classList.add('sidebar-right');
             } else {
                 layout.classList.remove('sidebar-right');
                 sidebar.classList.remove('sidebar-right');
+                handle.classList.remove('sidebar-right');
             }
             
-            // 更新菜单选中状态
-            menu.querySelectorAll('.sidebar-context-menu-item').forEach(item => {
-                item.classList.remove('active');
+            // 更新按钮选中状态
+            document.querySelectorAll('.sidebar-pos-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.pos === position);
             });
-            event.target.classList.add('active');
-            
-            menu.classList.remove('visible');
         }
-
-        // 点击其他地方关闭右键菜单
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.sidebar-title')) {
-                document.getElementById('sidebarContextMenu').classList.remove('visible');
-            }
-        });
 
         // 初始化预览内容
         updatePreview('main.rs');
