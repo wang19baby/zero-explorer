@@ -1272,9 +1272,9 @@
                     <span style="color: var(--border);">|</span>
                     <!-- Space 切换 -->
                     <div class="space-toggle" id="spaceToggle">
-                        <div class="space-btn active" data-space="default" onclick="switchSpace('default')">默认</div>
-                        <div class="space-btn" data-space="work" onclick="switchSpace('work')">Work</div>
-                        <div class="space-btn" data-space="dev" onclick="switchSpace('dev')">Dev</div>
+                        <div class="space-btn active" data-space="default" onclick="switchSpace('default')">🏠 默认</div>
+                        <div class="space-btn" data-space="work" onclick="switchSpace('work')">💼 Work</div>
+                        <div class="space-btn" data-space="dev" onclick="switchSpace('dev')">💻 Dev</div>
                         <div class="space-add" onclick="showSpaceDropdown()" title="管理空间">+</div>
                     </div>
                     <!-- Space 下拉菜单 -->
@@ -1855,9 +1855,10 @@ pub fn init() {
         function updateSpaceUI() {
             // 更新切换按钮
             const toggle = document.getElementById('spaceToggle');
-            toggle.innerHTML = Object.entries(spaces).map(([id, space]) => 
-                `<div class="space-btn${id === currentSpace ? ' active' : ''}" data-space="${id}" onclick="switchSpace('${id}')" ondblclick="renameSpace('${id}', event)">${space.name}</div>`
-            ).join('') + '<div class="space-add" onclick="showSpaceDropdown()" title="管理空间">+</div>';
+            toggle.innerHTML = Object.entries(spaces).map(([id, space]) => {
+                const icon = space.isDefault ? '🏠' : (id === 'work' ? '💼' : (id === 'dev' ? '💻' : '📁'));
+                return `<div class="space-btn${id === currentSpace ? ' active' : ''}" data-space="${id}" onclick="switchSpace('${id}')" ondblclick="renameSpace('${id}', event)">${icon} ${space.name}</div>`;
+            }).join('') + '<div class="space-add" onclick="showSpaceDropdown()" title="管理空间">+</div>';
             
             // 更新下拉菜单
             const dropdown = document.getElementById('spaceDropdown');
@@ -1874,9 +1875,10 @@ pub fn init() {
             const sidebarSpaceSection = document.querySelector('.sidebar-space-section');
             if (sidebarSpaceSection) {
                 const spaceList = sidebarSpaceSection.querySelector('.sidebar-title').nextElementSibling;
-                const newSpaceList = Object.entries(spaces).map(([id, space]) => 
-                    `<div class="sidebar-item${id === currentSpace ? ' active' : ''}" data-space="${id}" onclick="switchSpace('${id}')">${space.isDefault ? '🏠' : '📁'} ${space.name}</div>`
-                ).join('') + '<div class="sidebar-item" style="color: var(--primary);" onclick="createSpace()">+ 新建空间</div>';
+                const newSpaceList = Object.entries(spaces).map(([id, space]) => {
+                    const icon = space.isDefault ? '🏠' : (id === 'work' ? '💼' : (id === 'dev' ? '💻' : '📁'));
+                    return `<div class="sidebar-item${id === currentSpace ? ' active' : ''}" data-space="${id}" onclick="switchSpace('${id}')">${icon} ${space.name}</div>`;
+                }).join('') + '<div class="sidebar-item" style="color: var(--primary);" onclick="createSpace()">+ 新建空间</div>';
                 
                 // 保留标题，更新列表
                 sidebarSpaceSection.innerHTML = '<div class="sidebar-title">空间</div>' + newSpaceList;
