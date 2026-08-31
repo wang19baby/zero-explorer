@@ -213,20 +213,30 @@
         }
 
         .full-layout.sidebar-visible { grid-template-columns: var(--sidebar-width) 1fr; }
+        .full-layout.sidebar-visible.sidebar-right { grid-template-columns: 1fr var(--sidebar-width); }
 
         .layout-sidebar {
             background: var(--bg-secondary);
-            border-right: 1px solid var(--border);
             overflow-y: auto;
             overflow-x: hidden;
             transition: opacity 0.2s ease;
             position: relative;
         }
 
+        .layout-sidebar:not(.sidebar-right) {
+            border-right: 1px solid var(--border);
+        }
+
+        .layout-sidebar.sidebar-right {
+            border-left: 1px solid var(--border);
+            border-right: none;
+            order: 1;
+        }
+
         .full-layout:not(.sidebar-visible) .layout-sidebar { opacity: 0; pointer-events: none; }
         .full-layout.sidebar-visible .layout-sidebar { opacity: 1; pointer-events: auto; }
 
-        /* Sidebar Resize Handle */
+        /* Sidebar Resize Handle - positioned at scrollbar right */
         .sidebar-resize-handle {
             position: absolute;
             top: 0;
@@ -264,6 +274,41 @@
         .sidebar-resize-handle:hover .sidebar-resize-tooltip,
         .sidebar-resize-handle.active .sidebar-resize-tooltip {
             opacity: 1;
+        }
+
+        /* Sidebar Context Menu */
+        .sidebar-context-menu {
+            position: absolute;
+            top: 40px;
+            left: 10px;
+            background: var(--bg-base);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            padding: var(--space-2) 0;
+            z-index: 100;
+            display: none;
+            min-width: 120px;
+        }
+
+        .sidebar-context-menu.visible { display: block; }
+
+        .sidebar-context-menu-item {
+            padding: var(--space-2) var(--space-3);
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+        }
+
+        .sidebar-context-menu-item:hover { background: var(--primary-light); }
+
+        .sidebar-context-menu-item.active::before {
+            content: '✓';
+            position: absolute;
+            left: 8px;
+            color: var(--primary);
         }
 
         .layout-main { 
@@ -1066,10 +1111,14 @@
 
         <div class="full-layout" id="mainLayout">
             <!-- Sidebar -->
-            <div class="layout-sidebar">
+            <div class="layout-sidebar" id="sidebar">
                 <div class="sidebar">
                     <div class="sidebar-section">
-                        <div class="sidebar-title">此电脑</div>
+                        <div class="sidebar-title" oncontextmenu="showSidebarContextMenu(event)" style="cursor: context-menu;">此电脑 ▾</div>
+                        <div class="sidebar-context-menu" id="sidebarContextMenu">
+                            <div class="sidebar-context-menu-item active" onclick="setSidebarPosition('left')">左侧</div>
+                            <div class="sidebar-context-menu-item" onclick="setSidebarPosition('right')">右侧</div>
+                        </div>
                         <div class="sidebar-item">
                             <span>💾 本地磁盘 (C:)</span>
                         </div>
@@ -2471,6 +2520,43 @@ pub fn init() {
                 }
             });
         })();
+
+        // 侧边栏位置切换
+        function showSidebarContextMenu(e) {
+            e.preventDefault();
+            const menu = document.getElementById('sidebarContextMenu');
+            menu.style.left = e.offsetX + 'px';
+            menu.classList.add('visible');
+        }
+
+        function setSidebarPosition(position) {
+            const layout = document.getElementById('mainLayout');
+            const sidebar = document.getElementById('sidebar');
+            const menu = document.getElementById('sidebarContextMenu');
+            
+            if (position === 'right') {
+                layout.classList.add('sidebar-right');
+                sidebar.classList.add('sidebar-right');
+            } else {
+                layout.classList.remove('sidebar-right');
+                sidebar.classList.remove('sidebar-right');
+            }
+            
+            // 更新菜单选中状态
+            menu.querySelectorAll('.sidebar-context-menu-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            menu.classList.remove('visible');
+        }
+
+        // 点击其他地方关闭右键菜单
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.sidebar-title')) {
+                document.getElementById('sidebarContextMenu').classList.remove('visible');
+            }
+        });
 
         // 初始化预览内容
         updatePreview('main.rs');
