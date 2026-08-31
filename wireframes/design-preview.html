@@ -243,7 +243,7 @@
             top: 0;
             left: var(--sidebar-width);
             width: 4px;
-            height: calc(100% - 33px);
+            height: 100%;
             cursor: col-resize;
             background: transparent;
             transition: background 0.15s ease;
@@ -258,6 +258,10 @@
         .sidebar-resize-handle.sidebar-right {
             left: auto;
             right: var(--sidebar-width);
+        }
+
+        .full-layout:not(.sidebar-visible) .sidebar-resize-handle {
+            display: none;
         }
 
         .sidebar-resize-tooltip {
