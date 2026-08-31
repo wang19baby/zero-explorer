@@ -272,6 +272,112 @@
         .sidebar-item:hover { background: var(--bg-tertiary); color: var(--text-primary); }
         .sidebar-item.active { background: var(--primary-light); color: var(--primary); }
 
+        .sidebar-disk-bar {
+            padding: var(--space-1) var(--space-2);
+            margin-bottom: var(--space-1);
+        }
+
+        .disk-bar {
+            height: 4px;
+            background: var(--bg-tertiary);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 2px;
+        }
+
+        .disk-used {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+        }
+
+        .disk-text {
+            font-size: 10px;
+            color: var(--text-tertiary);
+        }
+
+        /* Mode Toggle */
+        .mode-toggle {
+            display: flex;
+            gap: 2px;
+            background: var(--bg-base);
+            padding: 2px;
+            border-radius: var(--radius-sm);
+        }
+
+        .mode-btn {
+            width: 24px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            cursor: pointer;
+            background: var(--bg-base);
+            color: var(--text-tertiary);
+        }
+
+        .mode-btn:hover { border-color: var(--primary); color: var(--text-primary); }
+        .mode-btn.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+
+        /* Cascade Panel Mode */
+        .cascade-container {
+            display: none;
+            flex-direction: row;
+            height: 100%;
+            overflow-x: auto;
+        }
+
+        .cascade-container.visible {
+            display: flex;
+        }
+
+        .cascade-column {
+            min-width: 250px;
+            max-width: 350px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-base);
+        }
+
+        .cascade-column:last-child {
+            border-right: none;
+            flex: 1;
+        }
+
+        .cascade-header {
+            display: flex;
+            align-items: center;
+            padding: var(--space-2) var(--space-3);
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .cascade-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .cascade-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-2) var(--space-3);
+            cursor: pointer;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .cascade-item:hover { background: var(--primary-light); }
+        .cascade-item.selected { background: var(--primary); color: white; }
+        .cascade-item.folder::after { content: '›'; margin-left: auto; color: var(--text-tertiary); }
+
         /* Panel - 面包屑在 Tab 上方 */
         .wireframe-panel { background: var(--bg-base); display: flex; flex-direction: column; }
 
@@ -699,14 +805,41 @@
                     </div>
                     <div class="sidebar-section">
                         <div class="sidebar-title">此电脑</div>
-                        <div class="sidebar-item">💾 本地磁盘 (C:)</div>
-                        <div class="sidebar-item">💾 工作磁盘 (D:)</div>
-                        <div class="sidebar-item">💾 数据磁盘 (E:)</div>
+                        <div class="sidebar-item">
+                            <span>💾 本地磁盘 (C:)</span>
+                        </div>
+                        <div class="sidebar-disk-bar">
+                            <div class="disk-bar"><div class="disk-used" style="width: 65%;"></div></div>
+                            <span class="disk-text">65% · 120/186 GB</span>
+                        </div>
+                        <div class="sidebar-item">
+                            <span>💾 工作磁盘 (D:)</span>
+                        </div>
+                        <div class="sidebar-disk-bar">
+                            <div class="disk-bar"><div class="disk-used" style="width: 42%;"></div></div>
+                            <span class="disk-text">42% · 168/400 GB</span>
+                        </div>
+                        <div class="sidebar-item">
+                            <span>💾 数据磁盘 (E:)</span>
+                        </div>
+                        <div class="sidebar-disk-bar">
+                            <div class="disk-bar"><div class="disk-used" style="width: 78%;"></div></div>
+                            <span class="disk-text">78% · 312/400 GB</span>
+                        </div>
                     </div>
                     <div class="sidebar-section">
-                        <div class="sidebar-title">收藏夹</div>
-                        <div class="sidebar-item">⭐ 项目文件</div>
-                        <div class="sidebar-item">⭐ 开发工具</div>
+                        <div class="sidebar-title">标签/书签</div>
+                        <div class="sidebar-item">🏷️ 项目文件</div>
+                        <div class="sidebar-item">🏷️ 开发工具</div>
+                        <div class="sidebar-item">🏷️ 设计资源</div>
+                        <div class="sidebar-item" style="color: var(--text-tertiary); font-size: 12px;">+ 添加书签</div>
+                    </div>
+                    <div class="sidebar-section">
+                        <div class="sidebar-title">最近访问</div>
+                        <div class="sidebar-item">📄 main.rs <span style="color: var(--text-tertiary); font-size: 11px; margin-left: auto;">2分钟前</span></div>
+                        <div class="sidebar-item">📝 README.md <span style="color: var(--text-tertiary); font-size: 11px; margin-left: auto;">1小时前</span></div>
+                        <div class="sidebar-item">🖼️ logo.png <span style="color: var(--text-tertiary); font-size: 11px; margin-left: auto;">昨天</span></div>
+                        <div class="sidebar-item">📕 report.pdf <span style="color: var(--text-tertiary); font-size: 11px; margin-left: auto;">3天前</span></div>
                     </div>
                 </div>
             </div>
@@ -967,6 +1100,41 @@
                 </div>
             </div>
 
+            <!-- Cascade Panel Mode (Hidden by default) -->
+            <div class="cascade-container" id="cascadeContainer">
+                <div class="cascade-column">
+                    <div class="cascade-header">根目录</div>
+                    <div class="cascade-list">
+                        <div class="cascade-item folder" onclick="cascadeClick(this, 1)">📁 D:</div>
+                        <div class="cascade-item folder" onclick="cascadeClick(this, 1)">📁 E:</div>
+                        <div class="cascade-item folder" onclick="cascadeClick(this, 1)">📁 C:</div>
+                    </div>
+                </div>
+                <div class="cascade-column">
+                    <div class="cascade-header">D:</div>
+                    <div class="cascade-list">
+                        <div class="cascade-item folder" onclick="cascadeClick(this, 2)">📁 work_space</div>
+                        <div class="cascade-item folder" onclick="cascadeClick(this, 2)">📁 backup</div>
+                        <div class="cascade-item folder" onclick="cascadeClick(this, 2)">📁 tools</div>
+                    </div>
+                </div>
+                <div class="cascade-column">
+                    <div class="cascade-header">work_space</div>
+                    <div class="cascade-list">
+                        <div class="cascade-item folder selected" onclick="cascadeClick(this, 3)">📁 personal_workspace</div>
+                        <div class="cascade-item folder" onclick="cascadeClick(this, 3)">📁 shared</div>
+                    </div>
+                </div>
+                <div class="cascade-column">
+                    <div class="cascade-header">personal_workspace</div>
+                    <div class="cascade-list">
+                        <div class="cascade-item folder" onclick="cascadeClick(this, 4)">📁 zero-explorer</div>
+                        <div class="cascade-item folder" onclick="cascadeClick(this, 4)">📁 web-app</div>
+                        <div class="cascade-item">📄 notes.txt</div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Status Bar -->
             <div class="layout-statusbar">
                 <div class="statusbar-left">
@@ -1029,6 +1197,23 @@
                                 <div class="layout-cell"></div>
                                 <div class="layout-cell"></div>
                             </div>
+                        </div>
+                    </div>
+                    <span style="color: var(--border);">|</span>
+                    <!-- 分栏模式切换 -->
+                    <div class="mode-toggle">
+                        <div class="mode-btn active" data-mode="panels" onclick="setMode('panels')" title="多面板模式">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <rect x="1" y="1" width="6" height="14" rx="1"/>
+                                <rect x="9" y="1" width="6" height="14" rx="1"/>
+                            </svg>
+                        </div>
+                        <div class="mode-btn" data-mode="cascade" onclick="setMode('cascade')" title="级联分栏模式">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <rect x="1" y="1" width="4" height="14" rx="1"/>
+                                <rect x="6" y="1" width="4" height="14" rx="1"/>
+                                <rect x="11" y="1" width="4" height="14" rx="1"/>
+                            </svg>
                         </div>
                     </div>
                     <span style="color: var(--border);">|</span>
@@ -1330,6 +1515,44 @@ pub fn init() {
                     });
                     break;
             }
+        }
+
+        // 分栏模式切换
+        let currentMode = 'panels';
+
+        function setMode(mode) {
+            currentMode = mode;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.mode === mode) {
+                    btn.classList.add('active');
+                }
+            });
+
+            // 切换显示
+            const layoutMain = document.querySelector('.layout-main');
+            const cascadeContainer = document.getElementById('cascadeContainer');
+            
+            if (mode === 'panels') {
+                layoutMain.style.display = 'grid';
+                cascadeContainer.classList.remove('visible');
+            } else {
+                layoutMain.style.display = 'none';
+                cascadeContainer.classList.add('visible');
+            }
+        }
+
+        // 级联分栏点击
+        function cascadeClick(item, level) {
+            // 移除同级选中状态
+            const column = item.closest('.cascade-column');
+            column.querySelectorAll('.cascade-item').forEach(i => i.classList.remove('selected'));
+            item.classList.add('selected');
+            
+            // 这里可以添加展开下一级的逻辑
+            console.log('Cascade click:', level, item.textContent);
         }
 
         // 侧边栏切换
