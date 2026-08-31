@@ -1253,6 +1253,23 @@
             <!-- Status Bar -->
             <div class="layout-statusbar">
                 <div class="statusbar-left">
+                    <!-- 分栏模式切换 -->
+                    <div class="mode-toggle">
+                        <div class="mode-btn active" data-mode="panels" onclick="setMode('panels')" title="多面板模式">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <rect x="1" y="1" width="6" height="14" rx="1"/>
+                                <rect x="9" y="1" width="6" height="14" rx="1"/>
+                            </svg>
+                        </div>
+                        <div class="mode-btn" data-mode="cascade" onclick="setMode('cascade')" title="级联分栏模式">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                                <rect x="1" y="1" width="4" height="14" rx="1"/>
+                                <rect x="6" y="1" width="4" height="14" rx="1"/>
+                                <rect x="11" y="1" width="4" height="14" rx="1"/>
+                            </svg>
+                        </div>
+                    </div>
+                    <span style="color: var(--border);">|</span>
                     <!-- Space 切换 -->
                     <div class="space-toggle" id="spaceToggle">
                         <div class="space-btn active" data-space="default" onclick="switchSpace('default')">默认</div>
@@ -1334,23 +1351,6 @@
                                 <div class="layout-cell"></div>
                                 <div class="layout-cell"></div>
                             </div>
-                        </div>
-                    </div>
-                    <span style="color: var(--border);">|</span>
-                    <!-- 分栏模式切换 -->
-                    <div class="mode-toggle">
-                        <div class="mode-btn active" data-mode="panels" onclick="setMode('panels')" title="多面板模式">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                <rect x="1" y="1" width="6" height="14" rx="1"/>
-                                <rect x="9" y="1" width="6" height="14" rx="1"/>
-                            </svg>
-                        </div>
-                        <div class="mode-btn" data-mode="cascade" onclick="setMode('cascade')" title="级联分栏模式">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                                <rect x="1" y="1" width="4" height="14" rx="1"/>
-                                <rect x="6" y="1" width="4" height="14" rx="1"/>
-                                <rect x="11" y="1" width="4" height="14" rx="1"/>
-                            </svg>
                         </div>
                     </div>
                     <span style="color: var(--border);">|</span>
