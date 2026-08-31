@@ -537,7 +537,35 @@
             background: var(--bg-tertiary);
             padding: 2px 2px 0 2px;
             cursor: pointer;
+            align-items: center;
         }
+
+        .panel-tabs-spacer {
+            flex: 1;
+        }
+
+        .panel-view-toggle {
+            display: flex;
+            gap: 2px;
+            padding: 2px;
+            margin-right: 2px;
+        }
+
+        .view-toggle-btn {
+            width: 20px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid transparent;
+            border-radius: 2px;
+            cursor: pointer;
+            background: transparent;
+            color: var(--text-tertiary);
+        }
+
+        .view-toggle-btn:hover { color: var(--text-primary); background: var(--bg-base); }
+        .view-toggle-btn.active { color: var(--primary); background: var(--bg-base); border-color: var(--border); }
 
         .panel-tab {
             padding: var(--space-1) var(--space-3);
@@ -553,6 +581,31 @@
         .panel-tab.active { background: var(--bg-base); box-shadow: 0 -1px 0 var(--primary); }
 
         .panel-content { flex: 1; padding: var(--space-2); overflow-y: auto; }
+
+        /* Tree View */
+        .tree-view {
+            padding: var(--space-2);
+            font-size: 13px;
+        }
+
+        .tree-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-2);
+            padding: var(--space-1) var(--space-2);
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+        }
+
+        .tree-item:hover { background: var(--primary-light); }
+
+        .tree-icon {
+            width: 12px;
+            font-size: 10px;
+            color: var(--text-tertiary);
+        }
+
+        .tree-indent-1 { padding-left: var(--space-6); }
 
         .panel-statusbar {
             display: flex;
@@ -984,6 +1037,30 @@
                         <div class="panel-tab" ondblclick="closeTab(event, this)">
                             <span>docs</span>
                         </div>
+                        <div class="panel-tabs-spacer"></div>
+                        <div class="panel-view-toggle">
+                            <div class="view-toggle-btn active" onclick="setViewMode(this, 'list')" title="列表视图">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <rect x="0" y="1" width="3" height="2" rx="0.5"/>
+                                    <rect x="4" y="1" width="8" height="2" rx="0.5"/>
+                                    <rect x="0" y="5" width="3" height="2" rx="0.5"/>
+                                    <rect x="4" y="5" width="8" height="2" rx="0.5"/>
+                                    <rect x="0" y="9" width="3" height="2" rx="0.5"/>
+                                    <rect x="4" y="9" width="8" height="2" rx="0.5"/>
+                                </svg>
+                            </div>
+                            <div class="view-toggle-btn" onclick="setViewMode(this, 'tree')" title="树形视图">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <rect x="0" y="1" width="3" height="2" rx="0.5"/>
+                                    <rect x="0" y="5" width="3" height="2" rx="0.5"/>
+                                    <rect x="5" y="5" width="3" height="2" rx="0.5"/>
+                                    <rect x="0" y="9" width="3" height="2" rx="0.5"/>
+                                    <line x1="1.5" y1="3" x2="1.5" y2="5" stroke="currentColor" stroke-width="1"/>
+                                    <line x1="1.5" y1="6" x2="5" y2="6" stroke="currentColor" stroke-width="1"/>
+                                    <line x1="1.5" y1="7" x2="1.5" y2="9" stroke="currentColor" stroke-width="1"/>
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                     <div class="panel-content">
                         <div class="file-list">
@@ -1059,6 +1136,30 @@
                         <div class="panel-tab active" ondblclick="closeTab(event, this)">
                             <span>target</span>
                         </div>
+                        <div class="panel-tabs-spacer"></div>
+                        <div class="panel-view-toggle">
+                            <div class="view-toggle-btn active" onclick="setViewMode(this, 'list')" title="列表视图">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <rect x="0" y="1" width="3" height="2" rx="0.5"/>
+                                    <rect x="4" y="1" width="8" height="2" rx="0.5"/>
+                                    <rect x="0" y="5" width="3" height="2" rx="0.5"/>
+                                    <rect x="4" y="5" width="8" height="2" rx="0.5"/>
+                                    <rect x="0" y="9" width="3" height="2" rx="0.5"/>
+                                    <rect x="4" y="9" width="8" height="2" rx="0.5"/>
+                                </svg>
+                            </div>
+                            <div class="view-toggle-btn" onclick="setViewMode(this, 'tree')" title="树形视图">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <rect x="0" y="1" width="3" height="2" rx="0.5"/>
+                                    <rect x="0" y="5" width="3" height="2" rx="0.5"/>
+                                    <rect x="5" y="5" width="3" height="2" rx="0.5"/>
+                                    <rect x="0" y="9" width="3" height="2" rx="0.5"/>
+                                    <line x1="1.5" y1="3" x2="1.5" y2="5" stroke="currentColor" stroke-width="1"/>
+                                    <line x1="1.5" y1="6" x2="5" y2="6" stroke="currentColor" stroke-width="1"/>
+                                    <line x1="1.5" y1="7" x2="1.5" y2="9" stroke="currentColor" stroke-width="1"/>
+                                </svg>
+                            </div>
+                        </div>
                     </div>
                     <div class="panel-content">
                         <div class="file-list">
@@ -1115,6 +1216,30 @@
                     <div class="panel-tabs" onclick="addTab(event, this)">
                         <div class="panel-tab active" ondblclick="closeTab(event, this)">
                             <span>2026</span>
+                        </div>
+                        <div class="panel-tabs-spacer"></div>
+                        <div class="panel-view-toggle">
+                            <div class="view-toggle-btn active" onclick="setViewMode(this, 'list')" title="列表视图">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <rect x="0" y="1" width="3" height="2" rx="0.5"/>
+                                    <rect x="4" y="1" width="8" height="2" rx="0.5"/>
+                                    <rect x="0" y="5" width="3" height="2" rx="0.5"/>
+                                    <rect x="4" y="5" width="8" height="2" rx="0.5"/>
+                                    <rect x="0" y="9" width="3" height="2" rx="0.5"/>
+                                    <rect x="4" y="9" width="8" height="2" rx="0.5"/>
+                                </svg>
+                            </div>
+                            <div class="view-toggle-btn" onclick="setViewMode(this, 'tree')" title="树形视图">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <rect x="0" y="1" width="3" height="2" rx="0.5"/>
+                                    <rect x="0" y="5" width="3" height="2" rx="0.5"/>
+                                    <rect x="5" y="5" width="3" height="2" rx="0.5"/>
+                                    <rect x="0" y="9" width="3" height="2" rx="0.5"/>
+                                    <line x1="1.5" y1="3" x2="1.5" y2="5" stroke="currentColor" stroke-width="1"/>
+                                    <line x1="1.5" y1="6" x2="5" y2="6" stroke="currentColor" stroke-width="1"/>
+                                    <line x1="1.5" y1="7" x2="1.5" y2="9" stroke="currentColor" stroke-width="1"/>
+                                </svg>
+                            </div>
                         </div>
                     </div>
                     <div class="panel-content">
@@ -1174,6 +1299,30 @@
                     <div class="panel-tabs" onclick="addTab(event, this)">
                         <div class="panel-tab active" ondblclick="closeTab(event, this)">
                             <span>Desktop</span>
+                        </div>
+                        <div class="panel-tabs-spacer"></div>
+                        <div class="panel-view-toggle">
+                            <div class="view-toggle-btn active" onclick="setViewMode(this, 'list')" title="列表视图">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <rect x="0" y="1" width="3" height="2" rx="0.5"/>
+                                    <rect x="4" y="1" width="8" height="2" rx="0.5"/>
+                                    <rect x="0" y="5" width="3" height="2" rx="0.5"/>
+                                    <rect x="4" y="5" width="8" height="2" rx="0.5"/>
+                                    <rect x="0" y="9" width="3" height="2" rx="0.5"/>
+                                    <rect x="4" y="9" width="8" height="2" rx="0.5"/>
+                                </svg>
+                            </div>
+                            <div class="view-toggle-btn" onclick="setViewMode(this, 'tree')" title="树形视图">
+                                <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+                                    <rect x="0" y="1" width="3" height="2" rx="0.5"/>
+                                    <rect x="0" y="5" width="3" height="2" rx="0.5"/>
+                                    <rect x="5" y="5" width="3" height="2" rx="0.5"/>
+                                    <rect x="0" y="9" width="3" height="2" rx="0.5"/>
+                                    <line x1="1.5" y1="3" x2="1.5" y2="5" stroke="currentColor" stroke-width="1"/>
+                                    <line x1="1.5" y1="6" x2="5" y2="6" stroke="currentColor" stroke-width="1"/>
+                                    <line x1="1.5" y1="7" x2="1.5" y2="9" stroke="currentColor" stroke-width="1"/>
+                                </svg>
+                            </div>
                         </div>
                     </div>
                     <div class="panel-content">
@@ -1919,6 +2068,41 @@ pub fn init() {
                 overlay.classList.remove('wide');
                 buttons[0].classList.add('active');
                 buttons[1].classList.remove('active');
+            }
+        }
+
+        // 视图模式切换
+        function setViewMode(btn, mode) {
+            const toggleContainer = btn.closest('.panel-view-toggle');
+            toggleContainer.querySelectorAll('.view-toggle-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            const panel = btn.closest('.wireframe-panel');
+            const fileListView = panel.querySelector('.file-list');
+            const treeView = panel.querySelector('.tree-view');
+            
+            if (mode === 'tree') {
+                if (!treeView) {
+                    const tree = document.createElement('div');
+                    tree.className = 'tree-view';
+                    tree.innerHTML = `
+                        <div class="tree-item"><span class="tree-icon">▼</span> 📁 components</div>
+                        <div class="tree-item tree-indent-1"><span class="tree-icon">▶</span> 📁 Button</div>
+                        <div class="tree-item tree-indent-1"><span class="tree-icon">▶</span> 📁 Modal</div>
+                        <div class="tree-item"><span class="tree-icon">▼</span> 📁 utils</div>
+                        <div class="tree-item tree-indent-1"><span class="tree-icon">▶</span> 📁 helpers</div>
+                        <div class="tree-item"><span class="tree-icon">▶</span> 📁 docs</div>
+                        <div class="tree-item"><span class="tree-icon">▶</span> 🦀 main.rs</div>
+                        <div class="tree-item"><span class="tree-icon">▶</span> 🦀 lib.rs</div>
+                        <div class="tree-item"><span class="tree-icon">▶</span> 📝 README.md</div>
+                    `;
+                    panel.querySelector('.panel-content').appendChild(tree);
+                }
+                if (fileListView) fileListView.style.display = 'none';
+                if (treeView) treeView.style.display = 'block';
+            } else {
+                if (fileListView) fileListView.style.display = 'block';
+                if (treeView) treeView.style.display = 'none';
             }
         }
 
