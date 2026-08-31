@@ -1248,9 +1248,7 @@
                 <div class="statusbar-left">
                     <!-- Space 切换 -->
                     <div class="space-toggle" id="spaceToggle">
-                        <div class="space-btn active" data-space="work" onclick="switchSpace('work')">Work</div>
-                        <div class="space-btn" data-space="dev" onclick="switchSpace('dev')">Dev</div>
-                        <div class="space-btn" data-space="game" onclick="switchSpace('game')">Game</div>
+                        <div class="space-btn active" data-space="default" onclick="switchSpace('default')">默认</div>
                         <div class="space-add" onclick="showSpaceDropdown()" title="管理空间">+</div>
                     </div>
                     <!-- Space 下拉菜单 -->
@@ -1259,20 +1257,10 @@
                             <span>空间管理</span>
                             <span style="cursor: pointer;" onclick="hideSpaceDropdown()">×</span>
                         </div>
-                        <div class="space-dropdown-item active" data-space="work" onclick="switchSpace('work')">
-                            <span class="space-icon" style="background: var(--primary); color: white;">W</span>
-                            <span class="space-name">Work</span>
-                            <span class="space-delete" onclick="deleteSpace('work', event)">×</span>
-                        </div>
-                        <div class="space-dropdown-item" data-space="dev" onclick="switchSpace('dev')">
-                            <span class="space-icon" style="background: var(--success); color: white;">D</span>
-                            <span class="space-name">Dev</span>
-                            <span class="space-delete" onclick="deleteSpace('dev', event)">×</span>
-                        </div>
-                        <div class="space-dropdown-item" data-space="game" onclick="switchSpace('game')">
-                            <span class="space-icon" style="background: var(--warning); color: white;">G</span>
-                            <span class="space-name">Game</span>
-                            <span class="space-delete" onclick="deleteSpace('game', event)">×</span>
+                        <div class="space-dropdown-item active" data-space="default" onclick="switchSpace('default')">
+                            <span class="space-icon" style="background: var(--primary); color: white;">默</span>
+                            <span class="space-name">默认</span>
+                            <span style="font-size: 10px; color: var(--text-tertiary);">默认</span>
                         </div>
                         <div class="space-dropdown-footer">
                             <span style="cursor: pointer; color: var(--primary);" onclick="createSpace()">+ 新建空间</span>
@@ -1729,11 +1717,9 @@ pub fn init() {
         }
 
         // Space 管理
-        let currentSpace = 'work';
+        let currentSpace = 'default';
         let spaces = {
-            work: { name: 'Work', color: 'var(--primary)', layout: 1, panels: [] },
-            dev: { name: 'Dev', color: 'var(--success)', layout: 2, panels: [] },
-            game: { name: 'Game', color: 'var(--warning)', layout: 1, panels: [] }
+            default: { name: '默认', color: 'var(--primary)', layout: 1, panels: [], isDefault: true }
         };
 
         function switchSpace(spaceId) {
@@ -1794,6 +1780,12 @@ pub fn init() {
         function deleteSpace(spaceId, event) {
             event.stopPropagation();
             
+            // 不能删除默认空间
+            if (spaces[spaceId]?.isDefault) {
+                alert('默认空间不能删除');
+                return;
+            }
+            
             if (Object.keys(spaces).length <= 1) {
                 alert('至少保留一个空间');
                 return;
@@ -1802,9 +1794,9 @@ pub fn init() {
             if (confirm(`确定要删除空间 "${spaces[spaceId].name}" 吗？`)) {
                 delete spaces[spaceId];
                 
-                // 如果删除的是当前空间，切换到第一个空间
+                // 如果删除的是当前空间，切换到默认空间
                 if (currentSpace === spaceId) {
-                    switchSpace(Object.keys(spaces)[0]);
+                    switchSpace('default');
                 }
                 
                 // 更新UI
@@ -1812,23 +1804,36 @@ pub fn init() {
             }
         }
 
+        function renameSpace(spaceId, event) {
+            event.stopPropagation();
+            
+            const space = spaces[spaceId];
+            const newName = prompt('请输入新名称:', space.name);
+            if (!newName || newName === space.name) return;
+            
+            space.name = newName;
+            
+            // 更新UI
+            updateSpaceUI();
+        }
+
         function updateSpaceUI() {
             // 更新切换按钮
             const toggle = document.getElementById('spaceToggle');
             toggle.innerHTML = Object.entries(spaces).map(([id, space]) => 
-                `<div class="space-btn${id === currentSpace ? ' active' : ''}" data-space="${id}" onclick="switchSpace('${id}')">${space.name}</div>`
+                `<div class="space-btn${id === currentSpace ? ' active' : ''}" data-space="${id}" onclick="switchSpace('${id}')" ondblclick="renameSpace('${id}', event)">${space.name}</div>`
             ).join('') + '<div class="space-add" onclick="showSpaceDropdown()" title="管理空间">+</div>';
             
             // 更新下拉菜单
             const dropdown = document.getElementById('spaceDropdown');
-            const itemsContainer = dropdown.querySelector('.space-dropdown-footer').previousElementSibling;
-            itemsContainer.outerHTML = Object.entries(spaces).map(([id, space]) => 
+            const itemsContainer = dropdown.querySelector('.space-dropdown-footer');
+            itemsContainer.insertAdjacentHTML('beforebegin', Object.entries(spaces).map(([id, space]) => 
                 `<div class="space-dropdown-item${id === currentSpace ? ' active' : ''}" data-space="${id}" onclick="switchSpace('${id}')">
                     <span class="space-icon" style="background: ${space.color}; color: white;">${space.name.charAt(0)}</span>
                     <span class="space-name">${space.name}</span>
-                    <span class="space-delete" onclick="deleteSpace('${id}', event)">×</span>
+                    ${space.isDefault ? '<span style="font-size: 10px; color: var(--text-tertiary);">默认</span>' : `<span class="space-delete" onclick="deleteSpace('${id}', event)">×</span>`}
                 </div>`
-            ).join('');
+            ).join(''));
         }
 
         // 点击外部关闭下拉菜单
