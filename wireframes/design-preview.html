@@ -912,13 +912,6 @@
             <div class="layout-sidebar">
                 <div class="sidebar">
                     <div class="sidebar-section">
-                        <div class="sidebar-title">标签</div>
-                        <div class="sidebar-item">📁 D:\work_space <span style="margin-left: auto; font-size: 10px; color: var(--text-tertiary);">×</span></div>
-                        <div class="sidebar-item">📁 E:\backup <span style="margin-left: auto; font-size: 10px; color: var(--text-tertiary);">×</span></div>
-                        <div class="sidebar-item">📁 D:\projects <span style="margin-left: auto; font-size: 10px; color: var(--text-tertiary);">×</span></div>
-                        <div class="sidebar-item add-folder" onclick="addFavoriteFolder()">+ 添加文件夹</div>
-                    </div>
-                    <div class="sidebar-section">
                         <div class="sidebar-title">此电脑</div>
                         <div class="sidebar-item">
                             <span>💾 本地磁盘 (C:)</span>
@@ -943,11 +936,25 @@
                         </div>
                     </div>
                     <div class="sidebar-section">
+                        <div class="sidebar-title">标签</div>
+                        <div class="sidebar-item">📁 D:\work_space <span style="margin-left: auto; font-size: 10px; color: var(--text-tertiary);">×</span></div>
+                        <div class="sidebar-item">📁 E:\backup <span style="margin-left: auto; font-size: 10px; color: var(--text-tertiary);">×</span></div>
+                        <div class="sidebar-item">📁 D:\projects <span style="margin-left: auto; font-size: 10px; color: var(--text-tertiary);">×</span></div>
+                        <div class="sidebar-item add-folder" onclick="addFavoriteFolder()">+ 添加文件夹</div>
+                    </div>
+                    <div class="sidebar-section">
                         <div class="sidebar-title">最近访问</div>
                         <div class="sidebar-item">📄 main.rs <span style="color: var(--text-tertiary); font-size: 11px; margin-left: auto;">2分钟前</span></div>
                         <div class="sidebar-item">📝 README.md <span style="color: var(--text-tertiary); font-size: 11px; margin-left: auto;">1小时前</span></div>
                         <div class="sidebar-item">🖼️ logo.png <span style="color: var(--text-tertiary); font-size: 11px; margin-left: auto;">昨天</span></div>
                         <div class="sidebar-item">📕 report.pdf <span style="color: var(--text-tertiary); font-size: 11px; margin-left: auto;">3天前</span></div>
+                    </div>
+                    <div class="sidebar-section sidebar-space-section">
+                        <div class="sidebar-title">空间</div>
+                        <div class="sidebar-item active" data-space="default" onclick="switchSpace('default')">🏠 默认</div>
+                        <div class="sidebar-item" data-space="work" onclick="switchSpace('work')">💼 Work</div>
+                        <div class="sidebar-item" data-space="dev" onclick="switchSpace('dev')">💻 Dev</div>
+                        <div class="sidebar-item" style="color: var(--primary);" onclick="createSpace()">+ 新建空间</div>
                     </div>
                 </div>
             </div>
@@ -1744,6 +1751,14 @@ pub fn init() {
                 }
             });
             
+            // 更新侧边栏Space状态
+            document.querySelectorAll('.sidebar-space-section .sidebar-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.space === spaceId) {
+                    item.classList.add('active');
+                }
+            });
+            
             // 应用空间配置（这里可以扩展为保存/恢复面板状态）
             const space = spaces[spaceId];
             console.log('Switch to space:', spaceId, space);
@@ -1834,6 +1849,18 @@ pub fn init() {
                     ${space.isDefault ? '<span style="font-size: 10px; color: var(--text-tertiary);">默认</span>' : `<span class="space-delete" onclick="deleteSpace('${id}', event)">×</span>`}
                 </div>`
             ).join(''));
+            
+            // 更新侧边栏Space列表
+            const sidebarSpaceSection = document.querySelector('.sidebar-space-section');
+            if (sidebarSpaceSection) {
+                const spaceList = sidebarSpaceSection.querySelector('.sidebar-title').nextElementSibling;
+                const newSpaceList = Object.entries(spaces).map(([id, space]) => 
+                    `<div class="sidebar-item${id === currentSpace ? ' active' : ''}" data-space="${id}" onclick="switchSpace('${id}')">${space.isDefault ? '🏠' : '📁'} ${space.name}</div>`
+                ).join('') + '<div class="sidebar-item" style="color: var(--primary);" onclick="createSpace()">+ 新建空间</div>';
+                
+                // 保留标题，更新列表
+                sidebarSpaceSection.innerHTML = '<div class="sidebar-title">空间</div>' + newSpaceList;
+            }
         }
 
         // 点击外部关闭下拉菜单
