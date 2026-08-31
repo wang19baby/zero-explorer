@@ -1298,7 +1298,7 @@
                 </div>
                 <div style="display: flex; align-items: center; gap: var(--space-3);">
                     <!-- 分栏布局切换 -->
-                    <div class="layout-toggle">
+                    <div class="layout-toggle" id="layoutToggle">
                         <!-- 1分栏 -->
                         <div class="layout-btn active" data-layout="1" onclick="setLayout(1)" title="1 分栏">
                             <div class="layout-grid layout-1x1">
@@ -1353,7 +1353,7 @@
                             </div>
                         </div>
                     </div>
-                    <span style="color: var(--border);">|</span>
+                    <span style="color: var(--border);" id="layoutSeparator">|</span>
                 </div>
             </div>
         </div>
@@ -1671,13 +1671,19 @@ pub fn init() {
             // 切换显示
             const layoutMain = document.querySelector('.layout-main');
             const cascadeContainer = document.getElementById('cascadeContainer');
+            const layoutToggle = document.getElementById('layoutToggle');
+            const layoutSeparator = document.getElementById('layoutSeparator');
             
             if (mode === 'panels') {
                 layoutMain.style.display = 'grid';
                 cascadeContainer.classList.remove('visible');
+                layoutToggle.style.display = 'flex';
+                layoutSeparator.style.display = 'inline';
             } else {
                 layoutMain.style.display = 'none';
                 cascadeContainer.classList.add('visible');
+                layoutToggle.style.display = 'none';
+                layoutSeparator.style.display = 'none';
             }
         }
 
