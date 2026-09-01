@@ -184,4 +184,40 @@ impl LayoutEngine {
         let height = rect.height.clamp(constraint.min_height, constraint.max_height);
         Rect::new(rect.x, rect.y, width, height)
     }
+
+    pub fn split_vertical(bounds: &Rect, ratio: f32, gap: f32) -> (Rect, Rect) {
+        let left_width = bounds.width * ratio;
+        let right_width = bounds.width - left_width - gap;
+
+        (
+            Rect::new(bounds.x, bounds.y, left_width, bounds.height),
+            Rect::new(
+                bounds.x + left_width + gap,
+                bounds.y,
+                right_width,
+                bounds.height,
+            ),
+        )
+    }
+
+    pub fn split_horizontal(bounds: &Rect, ratio: f32, gap: f32) -> (Rect, Rect) {
+        let top_height = bounds.height * ratio;
+        let bottom_height = bounds.height - top_height - gap;
+
+        (
+            Rect::new(bounds.x, bounds.y, bounds.width, top_height),
+            Rect::new(
+                bounds.x,
+                bounds.y + top_height + gap,
+                bounds.width,
+                bottom_height,
+            ),
+        )
+    }
+
+    pub fn center_rect(bounds: &Rect, width: f32, height: f32) -> Rect {
+        let x = bounds.x + (bounds.width - width) / 2.0;
+        let y = bounds.y + (bounds.height - height) / 2.0;
+        Rect::new(x, y, width, height)
+    }
 }
