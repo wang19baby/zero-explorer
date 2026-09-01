@@ -21,6 +21,14 @@ impl Color {
         let b = (hex & 0xFF) as f32 / 255.0;
         Self { r, g, b, a: 1.0 }
     }
+
+    pub fn to_u32(&self) -> u32 {
+        let r = (self.r * 255.0) as u32;
+        let g = (self.g * 255.0) as u32;
+        let b = (self.b * 255.0) as u32;
+        let a = (self.a * 255.0) as u32;
+        (a << 24) | (r << 16) | (g << 8) | b
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -153,6 +161,116 @@ impl Default for Spacing {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ThemeMode {
+    Light,
+    Dark,
+    System,
+}
+
+impl Default for ThemeMode {
+    fn default() -> Self {
+        Self::System
+    }
+}
+
+impl ThemeMode {
+    pub fn display_name(&self) -> &str {
+        match self {
+            ThemeMode::Light => "Light",
+            ThemeMode::Dark => "Dark",
+            ThemeMode::System => "System",
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct ThemeManager {
+    mode: ThemeMode,
+    current: Theme,
+}
+
+impl ThemeManager {
+    pub fn new() -> Self {
+        Self {
+            mode: ThemeMode::default(),
+            current: Theme::dark(),
+        }
+    }
+
+    pub fn with_mode(mode: ThemeMode) -> Self {
+        let mut manager = Self::new();
+        manager.set_mode(mode);
+        manager
+    }
+
+    pub fn mode(&self) -> ThemeMode {
+        self.mode
+    }
+
+    pub fn set_mode(&mut self, mode: ThemeMode) {
+        self.mode = mode;
+        self.current = match mode {
+            ThemeMode::Light => Theme::light(),
+            ThemeMode::Dark => Theme::dark(),
+            ThemeMode::System => Self::detect_system_theme(),
+        };
+    }
+
+    pub fn theme(&self) -> &Theme {
+        &self.current
+    }
+
+    pub fn toggle(&mut self) {
+        self.set_mode(match self.mode {
+            ThemeMode::Light => ThemeMode::Dark,
+            ThemeMode::Dark => ThemeMode::Light,
+            ThemeMode::System => ThemeMode::Light,
+        });
+    }
+
+    fn detect_system_theme() -> Theme {
+        #[cfg(target_os = "windows")]
+        {
+            if Self::is_windows_dark_mode() {
+                Theme::dark()
+            } else {
+                Theme::light()
+            }
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            Theme::dark()
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    fn is_windows_dark_mode() -> bool {
+        use std::process::Command;
+        Command::new("reg")
+            .args([
+                "query",
+                r"HKCU\SOFTWARE\Microsoft\Windows\CurrentVersion\Themes\Personalize",
+                "/v",
+                "AppsUseLightTheme",
+                "/t",
+                "REG_DWORD",
+            ])
+            .output()
+            .map(|output| {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                stdout.contains("0x0")
+            })
+            .unwrap_or(false)
+    }
+}
+
+impl Default for ThemeManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Theme {
     pub colors: ThemeColors,
@@ -190,5 +308,93 @@ impl Theme {
             border_radius: 4.0,
             row_height: 36.0,
         }
+    }
+
+    pub fn primary(&self) -> &Color {
+        &self.colors.primary
+    }
+
+    pub fn primary_light(&self) -> &Color {
+        &self.colors.primary_light
+    }
+
+    pub fn primary_dark(&self) -> &Color {
+        &self.colors.primary_dark
+    }
+
+    pub fn background(&self) -> &Color {
+        &self.colors.background
+    }
+
+    pub fn surface(&self) -> &Color {
+        &self.colors.surface
+    }
+
+    pub fn surface_variant(&self) -> &Color {
+        &self.colors.surface_variant
+    }
+
+    pub fn text_primary(&self) -> &Color {
+        &self.colors.text_primary
+    }
+
+    pub fn text_secondary(&self) -> &Color {
+        &self.colors.text_secondary
+    }
+
+    pub fn hover(&self) -> &Color {
+        &self.colors.hover
+    }
+
+    pub fn pressed(&self) -> &Color {
+        &self.colors.pressed
+    }
+
+    pub fn focused(&self) -> &Color {
+        &self.colors.focused
+    }
+
+    pub fn selected(&self) -> &Color {
+        &self.colors.selected
+    }
+
+    pub fn border(&self) -> &Color {
+        &self.colors.border
+    }
+
+    pub fn border_light(&self) -> &Color {
+        &self.colors.border_light
+    }
+
+    pub fn success(&self) -> &Color {
+        &self.colors.success
+    }
+
+    pub fn warning(&self) -> &Color {
+        &self.colors.warning
+    }
+
+    pub fn error(&self) -> &Color {
+        &self.colors.error
+    }
+
+    pub fn info(&self) -> &Color {
+        &self.colors.info
+    }
+
+    pub fn folder(&self) -> &Color {
+        &self.colors.folder
+    }
+
+    pub fn file(&self) -> &Color {
+        &self.colors.file
+    }
+
+    pub fn to_u32(&self) -> u32 {
+        self.colors.primary.to_u32()
+    }
+
+    pub fn on_surface(&self) -> &Color {
+        &self.colors.text_primary
     }
 }

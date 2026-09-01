@@ -20,4 +20,4 @@ pub use renderer::GpuContext;
 pub use sidebar::{Sidebar, SidebarPosition, SidebarItem};
 pub use status_bar::{StatusBar, StatusBarLayout};
 pub use tab_bar::{TabBar, Tab, TabDragState};
-pub use theme::{Color, Theme, ThemeColors};
+pub use theme::{Color, Theme, ThemeColors, ThemeMode, ThemeManager};
