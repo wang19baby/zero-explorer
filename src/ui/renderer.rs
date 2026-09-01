@@ -157,7 +157,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var tex_color = textureSample(t_texture, s_sampler, in.tex_coord);
-    return vec4<f32>(in.color.rgb, in.color.a * tex_color.r);
+    return vec4<f32>(in.color.rgb, in.color.a * tex_color.a);
 }
 "#;
 
@@ -174,7 +174,7 @@ impl TextureAtlas {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::R8Unorm,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
             usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
             view_formats: &[],
         });
