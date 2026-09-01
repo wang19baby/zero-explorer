@@ -1,6 +1,7 @@
 mod app;
 mod core;
 mod fs;
+mod plugin;
 mod ui;
 
 use app::app::App;
