@@ -244,6 +244,8 @@ impl TextureAtlas {
         
         // 上传像素数据
         if let Some(texture) = &self.texture {
+            log::debug!("upload_glyph id={} size={}x{} at ({},{}) pixels_len={}", 
+                glyph_id.0, width, height, self.cursor_x, self.cursor_y, pixels.len());
             queue.write_texture(
                 wgpu::ImageCopyTexture {
                     texture,
@@ -667,9 +669,15 @@ impl GpuContext {
                         }
                     }
                 };
+
+                if vertices.is_empty() {
+                    log::debug!("draw_text '{}': glyph_id={}, size={}x{}, atlas=({},{}), advance={}", 
+                        text, glyph_id.0, glyph_data.width, glyph_data.height, 
+                        atlas_pos.x, atlas_pos.y, glyph_data.advance);
+                }
                 
                 let glyph_x = current_x + glyph_data.bearing_x;
-                let glyph_y = y - glyph_data.bearing_y;
+                let glyph_y = y + glyph_data.bearing_y;
                 
                 let tex_x1 = atlas_pos.x as f32 / self.atlas.size as f32;
                 let tex_y1 = atlas_pos.y as f32 / self.atlas.size as f32;
@@ -719,6 +727,7 @@ impl GpuContext {
 
         // 渲染文字
         if !vertices.is_empty() {
+            log::debug!("draw_text '{}': {} vertices, {} indices", text, vertices.len(), indices.len());
             let vertex_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Text Vertex Buffer"),
                 contents: bytemuck::cast_slice(&vertices),
@@ -761,5 +770,19 @@ impl GpuContext {
             .as_ref()
             .map(|fr| fr.measure_text(text))
             .unwrap_or(0.0)
+    }
+
+    pub fn line_height(&self) -> f32 {
+        self.font_renderer
+            .as_ref()
+            .map(|fr| fr.line_height())
+            .unwrap_or(16.0)
+    }
+
+    pub fn ascent(&self) -> f32 {
+        self.font_renderer
+            .as_ref()
+            .map(|fr| fr.ascent())
+            .unwrap_or(12.0)
     }
 }

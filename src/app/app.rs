@@ -3,7 +3,7 @@ use winit::event::{Event, WindowEvent};
 use winit::event_loop::EventLoop;
 use winit::window::{Window, WindowBuilder};
 
-use crate::core::event::{AppEvent, EventDispatcher};
+use crate::core::event::EventDispatcher;
 use crate::core::state::AppState;
 use crate::ui::renderer::GpuContext;
 use crate::ui::theme::Theme;
@@ -30,13 +30,19 @@ enum HoveredArea {
 }
 
 impl App {
+    fn text_y_centered(gpu: &GpuContext, container_y: f32, container_h: f32) -> f32 {
+        let lh = gpu.line_height();
+        let asc = gpu.ascent();
+        container_y + (container_h - lh) / 2.0 + asc
+    }
+
     pub fn new() -> Self {
         Self {
             window: None,
             gpu: None,
             state: AppState::new(),
             dispatcher: EventDispatcher::new(),
-            theme: Theme::dark(),
+            theme: Theme::light(),
             mouse_x: 0.0,
             mouse_y: 0.0,
             hovered_area: HoveredArea::None,
@@ -55,79 +61,33 @@ impl App {
         );
 
         let gpu = GpuContext::new(window.clone())?;
+
+        self.window = Some(window.clone());
         self.gpu = Some(gpu);
-        self.window = Some(window);
 
-        log::info!("Zero Explorer started");
-
-        event_loop.run(move |event, elwt| {
+        event_loop.run(move |event, target| {
             match event {
-                Event::WindowEvent { event, .. } => {
-                    match event {
-                        WindowEvent::CloseRequested => {
-                            log::info!("Close requested");
-                            elwt.exit();
-                        }
-                        WindowEvent::Resized(size) => {
-                            log::debug!("Window resized: {}x{}", size.width, size.height);
-                            if let Some(gpu) = &mut self.gpu {
-                                gpu.resize(size.width, size.height);
-                            }
-                            self.dispatcher.dispatch(&AppEvent::WindowResized(
-                                size.width,
-                                size.height,
-                            ));
-                        }
-                        WindowEvent::Focused(focused) => {
-                            self.dispatcher
-                                .dispatch(&AppEvent::WindowFocused(focused));
-                        }
-                        WindowEvent::KeyboardInput { event, .. } => {
-                            if event.state == winit::event::ElementState::Pressed {
-                                if let winit::keyboard::PhysicalKey::Code(keycode) =
-                                    event.physical_key
-                                {
-                                    self.dispatcher
-                                        .dispatch(&AppEvent::KeyPressed(keycode as u32));
-                                }
-                            }
-                        }
-                        WindowEvent::MouseInput {
-                            state: _, button, ..
-                        } => {
-                            let button_value = match button {
-                                winit::event::MouseButton::Left => 0,
-                                winit::event::MouseButton::Right => 1,
-                                winit::event::MouseButton::Middle => 2,
-                                winit::event::MouseButton::Back => 3,
-                                winit::event::MouseButton::Forward => 4,
-                                winit::event::MouseButton::Other(n) => n as u32,
-                            };
-                            self.dispatcher
-                                .dispatch(&AppEvent::MouseButtonPressed(button_value));
-                        }
-                        WindowEvent::CursorMoved { position, .. } => {
-                            self.mouse_x = position.x as f32;
-                            self.mouse_y = position.y as f32;
-                            self.update_hovered_area();
-                            self.dispatcher.dispatch(&AppEvent::MouseMoved(
-                                position.x,
-                                position.y,
-                            ));
-                        }
-                        WindowEvent::MouseWheel { delta, .. } => {
-                            let scroll = match delta {
-                                winit::event::MouseScrollDelta::LineDelta(_, y) => y as f64,
-                                winit::event::MouseScrollDelta::PixelDelta(pos) => pos.y,
-                            };
-                            self.dispatcher.dispatch(&AppEvent::MouseWheel(scroll));
-                        }
-                        WindowEvent::RedrawRequested => {
-                            self.render();
-                        }
-                        _ => {}
+                Event::WindowEvent { event, .. } => match event {
+                    WindowEvent::CloseRequested => {
+                        target.exit();
                     }
-                }
+                    WindowEvent::Resized(size) => {
+                        if let Some(gpu) = &mut self.gpu {
+                            gpu.resize(size.width, size.height);
+                        }
+                        self.window.as_ref().unwrap().request_redraw();
+                    }
+                    WindowEvent::CursorMoved { position, .. } => {
+                        self.mouse_x = position.x as f32;
+                        self.mouse_y = position.y as f32;
+                        self.update_hovered_area();
+                        self.window.as_ref().unwrap().request_redraw();
+                    }
+                    WindowEvent::RedrawRequested => {
+                        self.render();
+                    }
+                    _ => {}
+                },
                 Event::AboutToWait => {
                     if let Some(window) = &self.window {
                         window.request_redraw();
@@ -141,41 +101,24 @@ impl App {
     }
 
     fn update_hovered_area(&mut self) {
-        let _screen_width = self
-            .gpu
-            .as_ref()
-            .map(|g| g.surface_config.width as f32)
-            .unwrap_or(1200.0);
-        let screen_height = self
-            .gpu
-            .as_ref()
-            .map(|g| g.surface_config.height as f32)
-            .unwrap_or(800.0);
+        let _w = self.window.as_ref().unwrap().inner_size().width as f32;
+        let h = self.window.as_ref().unwrap().inner_size().height as f32;
+        let sidebar_w = 200.0f32;
+        let breadcrumb_h = 36.0f32;
+        let tab_h = 32.0f32;
+        let status_h = 30.0f32;
 
-        self.hovered_area = if self.mouse_x < 200.0 {
+        self.hovered_area = if self.mouse_x < sidebar_w {
             HoveredArea::Sidebar
-        } else if self.mouse_y < 40.0 {
-            HoveredArea::TabBar
-        } else if self.mouse_y < 76.0 {
+        } else if self.mouse_y < breadcrumb_h {
             HoveredArea::AddressBar
-        } else if self.mouse_y < screen_height - 30.0 {
-            HoveredArea::FileList
-        } else {
+        } else if self.mouse_y < breadcrumb_h + tab_h {
+            HoveredArea::TabBar
+        } else if self.mouse_y > h - status_h {
             HoveredArea::StatusBar
-        };
-    }
-
-    fn get_area_color_static(hovered: HoveredArea, area: HoveredArea, base_color: [f32; 4]) -> [f32; 4] {
-        if area == hovered {
-            [
-                base_color[0] + 0.05,
-                base_color[1] + 0.05,
-                base_color[2] + 0.05,
-                base_color[3],
-            ]
         } else {
-            base_color
-        }
+            HoveredArea::FileList
+        };
     }
 
     fn render(&mut self) {
@@ -191,454 +134,195 @@ impl App {
                         label: Some("Zero Explorer Encoder"),
                     });
 
-                // Clear with background color (dark theme)
-                gpu.clear(
-                    &mut encoder,
-                    &view,
-                    wgpu::Color {
-                        r: 0.11,
-                        g: 0.11,
-                        b: 0.11,
-                        a: 1.0,
-                    },
-                );
+                // Win11 light theme colors
+                let bg_base: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
+                let bg_secondary: [f32; 4] = [0.976, 0.976, 0.976, 1.0];
+                let bg_tertiary: [f32; 4] = [0.953, 0.953, 0.953, 1.0];
+                let border: [f32; 4] = [0.898, 0.898, 0.898, 1.0];
+                let text_primary: [f32; 4] = [0.102, 0.102, 0.102, 1.0];
+                let text_secondary: [f32; 4] = [0.380, 0.380, 0.380, 1.0];
+                let text_tertiary: [f32; 4] = [0.620, 0.620, 0.620, 1.0];
+                let primary: [f32; 4] = [0.0, 0.471, 0.831, 1.0];
+                let primary_light: [f32; 4] = [0.910, 0.957, 0.992, 1.0];
 
-                let screen_width = gpu.surface_config.width as f32;
-                let screen_height = gpu.surface_config.height as f32;
-                let hovered_area = self.hovered_area;
+                gpu.clear(&mut encoder, &view, wgpu::Color { r: 1.0, g: 1.0, b: 1.0, a: 1.0 });
 
-                // Draw sidebar (left panel) with hover effect
-                let sidebar_color = Self::get_area_color_static(hovered_area, HoveredArea::Sidebar, [0.15, 0.15, 0.15, 1.0]);
-                gpu.draw_rect(
-                    &mut encoder,
-                    &view,
-                    0.0,
-                    0.0,
-                    200.0,
-                    screen_height,
-                    sidebar_color,
-                    screen_width,
-                    screen_height,
-                );
+                let sw = gpu.surface_config.width as f32;
+                let sh = gpu.surface_config.height as f32;
+                let sidebar_w = 200.0f32;
+                let breadcrumb_h = 36.0f32;
+                let tab_h = 32.0f32;
+                let status_h = 30.0f32;
+                let row_h = 28.0f32;
+                let header_h = 28.0f32;
 
-                // Draw sidebar items with text
-                let sidebar_items = [
-                    ("This PC", true),
-                    ("Desktop", false),
-                    ("Documents", false),
-                    ("Downloads", false),
-                    ("Pictures", false),
+                // === SIDEBAR ===
+                gpu.draw_rect(&mut encoder, &view, 0.0, 0.0, sidebar_w, sh, bg_secondary, sw, sh);
+                gpu.draw_rect(&mut encoder, &view, sidebar_w, 0.0, 1.0, sh, border, sw, sh);
+
+                let mut sy = 12.0f32;
+
+                // Section: 此电脑
+                gpu.draw_text(&mut encoder, &view, "此电脑", 12.0, Self::text_y_centered(gpu, sy, 20.0), text_secondary, sw, sh);
+                sy += 24.0;
+
+                let disks = [
+                    ("本地磁盘 (C:)", 0.65f32, "120/186 GB"),
+                    ("工作磁盘 (D:)", 0.42f32, "168/400 GB"),
+                    ("数据磁盘 (E:)", 0.78f32, "312/400 GB"),
                 ];
-
-                for (i, (name, is_expanded)) in sidebar_items.iter().enumerate() {
-                    let y = 50.0 + i as f32 * 35.0;
-                    let item_color = if self.mouse_y >= y && self.mouse_y < y + 35.0 && self.mouse_x < 200.0 {
-                        [0.25, 0.25, 0.25, 1.0]
-                    } else {
-                        [0.18, 0.18, 0.18, 1.0]
-                    };
-
-                    gpu.draw_rect(
-                        &mut encoder,
-                        &view,
-                        10.0,
-                        y,
-                        180.0,
-                        30.0,
-                        item_color,
-                        screen_width,
-                        screen_height,
-                    );
-
-                    // Draw expand indicator
-                    if *is_expanded {
-                        gpu.draw_rect(
-                            &mut encoder,
-                            &view,
-                            15.0,
-                            y + 10.0,
-                            10.0,
-                            10.0,
-                            [0.4, 0.7, 1.0, 1.0],
-                            screen_width,
-                            screen_height,
-                        );
-                    }
-
-                    // Draw text
-                    gpu.draw_text(
-                        &mut encoder,
-                        &view,
-                        name,
-                        30.0,
-                        y + 8.0,
-                        [0.9, 0.9, 0.9, 1.0],
-                        screen_width,
-                        screen_height,
-                    );
+                for (name, pct, info) in disks.iter() {
+                    gpu.draw_text(&mut encoder, &view, name, 12.0, Self::text_y_centered(gpu, sy, row_h), text_primary, sw, sh);
+                    sy += row_h;
+                    gpu.draw_rect(&mut encoder, &view, 12.0, sy + 6.0, sidebar_w - 24.0, 4.0, bg_tertiary, sw, sh);
+                    gpu.draw_rect(&mut encoder, &view, 12.0, sy + 6.0, (sidebar_w - 24.0) * *pct, 4.0, primary, sw, sh);
+                    gpu.draw_text(&mut encoder, &view, info, 12.0, Self::text_y_centered(gpu, sy + 12.0, 16.0), text_tertiary, sw, sh);
+                    sy += 28.0;
                 }
 
-                // Draw sidebar border
-                gpu.draw_rect(
-                    &mut encoder,
-                    &view,
-                    200.0,
-                    0.0,
-                    1.0,
-                    screen_height,
-                    [0.3, 0.3, 0.3, 1.0],
-                    screen_width,
-                    screen_height,
-                );
+                sy += 8.0;
+                // Section: 标签
+                gpu.draw_text(&mut encoder, &view, "标签", 12.0, Self::text_y_centered(gpu, sy, 20.0), text_secondary, sw, sh);
+                sy += 24.0;
+                let bookmarks = ["D:\\work_space", "E:\\backup", "D:\\projects"];
+                for bm in bookmarks.iter() {
+                    let item_color = if self.mouse_y >= sy && self.mouse_y < sy + row_h && self.mouse_x < sidebar_w {
+                        bg_tertiary
+                    } else {
+                        bg_secondary
+                    };
+                    gpu.draw_rect(&mut encoder, &view, 4.0, sy, sidebar_w - 8.0, row_h, item_color, sw, sh);
+                    gpu.draw_text(&mut encoder, &view, bm, 12.0, Self::text_y_centered(gpu, sy, row_h), text_primary, sw, sh);
+                    sy += row_h;
+                }
+                gpu.draw_text(&mut encoder, &view, "+ 添加文件夹", 12.0, Self::text_y_centered(gpu, sy, row_h), primary, sw, sh);
+                sy += row_h + 8.0;
 
-                // Draw tab bar with hover effect
-                let tab_color = Self::get_area_color_static(hovered_area, HoveredArea::TabBar, [0.18, 0.18, 0.18, 1.0]);
-                gpu.draw_rect(
-                    &mut encoder,
-                    &view,
-                    201.0,
-                    0.0,
-                    screen_width - 201.0,
-                    40.0,
-                    tab_color,
-                    screen_width,
-                    screen_height,
-                );
+                // Section: 最近访问
+                gpu.draw_text(&mut encoder, &view, "最近访问", 12.0, Self::text_y_centered(gpu, sy, 20.0), text_secondary, sw, sh);
+                sy += 24.0;
+                let recents = [
+                    ("main.rs", "2分钟前"),
+                    ("README.md", "1小时前"),
+                    ("logo.png", "昨天"),
+                    ("report.pdf", "3天前"),
+                ];
+                for (name, time) in recents.iter() {
+                    gpu.draw_text(&mut encoder, &view, name, 12.0, Self::text_y_centered(gpu, sy, row_h), text_primary, sw, sh);
+                    gpu.draw_text(&mut encoder, &view, time, 120.0, Self::text_y_centered(gpu, sy, row_h), text_tertiary, sw, sh);
+                    sy += row_h;
+                }
 
-                // Draw tab items with text
-                let tabs = ["Home", "Documents", "Downloads"];
-                let mut tab_x = 210.0;
+                // === MAIN CONTENT AREA ===
+                let main_x = sidebar_w + 1.0;
+                let main_w = sw - sidebar_w - 1.0;
+
+                // Breadcrumb bar
+                gpu.draw_rect(&mut encoder, &view, main_x, 0.0, main_w, breadcrumb_h, bg_base, sw, sh);
+                gpu.draw_rect(&mut encoder, &view, main_x, breadcrumb_h - 1.0, main_w, 1.0, border, sw, sh);
+
+                let crumbs = ["D:", "work_space", "personal_workspace", "src"];
+                let mut cx = main_x + 12.0;
+                for (i, crumb) in crumbs.iter().enumerate() {
+                    let color = if i == crumbs.len() - 1 { text_primary } else { text_secondary };
+                    gpu.draw_text(&mut encoder, &view, crumb, cx, Self::text_y_centered(gpu, 0.0, breadcrumb_h), color, sw, sh);
+                    cx += gpu.measure_text(crumb) + 4.0;
+                    if i < crumbs.len() - 1 {
+                        gpu.draw_text(&mut encoder, &view, "›", cx, Self::text_y_centered(gpu, 0.0, breadcrumb_h), text_tertiary, sw, sh);
+                        cx += gpu.measure_text("›") + 8.0;
+                    }
+                }
+
+                // Tab bar
+                let tab_y = breadcrumb_h;
+                gpu.draw_rect(&mut encoder, &view, main_x, tab_y, main_w, tab_h, bg_tertiary, sw, sh);
+                gpu.draw_rect(&mut encoder, &view, main_x, tab_y + tab_h - 1.0, main_w, 1.0, border, sw, sh);
+
+                let tabs = ["src", "docs"];
+                let mut tx = main_x + 4.0;
                 for (i, tab_name) in tabs.iter().enumerate() {
-                    let tab_width = 100.0;
-                    let is_active = i == 0;
-                    let tab_item_color = if is_active {
-                        [0.22, 0.22, 0.22, 1.0]
-                    } else {
-                        [0.16, 0.16, 0.16, 1.0]
-                    };
-
-                    gpu.draw_rect(
-                        &mut encoder,
-                        &view,
-                        tab_x,
-                        5.0,
-                        tab_width,
-                        30.0,
-                        tab_item_color,
-                        screen_width,
-                        screen_height,
-                    );
-
-                    // Active tab indicator
-                    if is_active {
-                        gpu.draw_rect(
-                            &mut encoder,
-                            &view,
-                            tab_x,
-                            35.0,
-                            tab_width,
-                            3.0,
-                            [0.4, 0.7, 1.0, 1.0],
-                            screen_width,
-                            screen_height,
-                        );
+                    let tab_w = gpu.measure_text(tab_name) + 24.0;
+                    let tab_color = if i == 0 { bg_base } else { bg_tertiary };
+                    gpu.draw_rect(&mut encoder, &view, tx, tab_y + 2.0, tab_w, tab_h - 2.0, tab_color, sw, sh);
+                    if i == 0 {
+                        gpu.draw_rect(&mut encoder, &view, tx, tab_y + 2.0, tab_w, 2.0, primary, sw, sh);
                     }
-
-                    // Draw tab text
-                    gpu.draw_text(
-                        &mut encoder,
-                        &view,
-                        tab_name,
-                        tab_x + 10.0,
-                        15.0,
-                        [0.9, 0.9, 0.9, 1.0],
-                        screen_width,
-                        screen_height,
-                    );
-
-                    tab_x += tab_width + 5.0;
+                    gpu.draw_text(&mut encoder, &view, tab_name, tx + 12.0, Self::text_y_centered(gpu, tab_y + 2.0, tab_h - 2.0), text_primary, sw, sh);
+                    tx += tab_w + 1.0;
                 }
 
-                // Draw tab bar border
-                gpu.draw_rect(
-                    &mut encoder,
-                    &view,
-                    201.0,
-                    40.0,
-                    screen_width - 201.0,
-                    1.0,
-                    [0.3, 0.3, 0.3, 1.0],
-                    screen_width,
-                    screen_height,
-                );
+                // File list area
+                let list_y = tab_y + tab_h;
+                let list_h = sh - list_y - status_h;
+                gpu.draw_rect(&mut encoder, &view, main_x, list_y, main_w, list_h, bg_base, sw, sh);
 
-                // Draw breadcrumb/address bar with hover effect
-                let address_color = Self::get_area_color_static(hovered_area, HoveredArea::AddressBar, [0.13, 0.13, 0.13, 1.0]);
-                gpu.draw_rect(
-                    &mut encoder,
-                    &view,
-                    201.0,
-                    41.0,
-                    screen_width - 201.0,
-                    35.0,
-                    address_color,
-                    screen_width,
-                    screen_height,
-                );
+                // Column header
+                let header_y = list_y;
+                gpu.draw_rect(&mut encoder, &view, main_x, header_y, main_w, header_h, bg_tertiary, sw, sh);
+                gpu.draw_rect(&mut encoder, &view, main_x, header_y + header_h - 1.0, main_w, 1.0, border, sw, sh);
 
-                // Draw breadcrumb segments with text
-                let segments = ["This PC", "Documents", "Projects"];
-                let mut seg_x = 215.0;
-                for (i, segment) in segments.iter().enumerate() {
-                    // Segment background
-                    gpu.draw_rect(
-                        &mut encoder,
-                        &view,
-                        seg_x,
-                        48.0,
-                        80.0,
-                        20.0,
-                        [0.2, 0.2, 0.2, 1.0],
-                        screen_width,
-                        screen_height,
-                    );
+                let col_name = main_x + 36.0;
+                let col_type = main_x + main_w * 0.45;
+                let col_size = main_x + main_w * 0.7;
+                let col_date = main_x + main_w * 0.82;
 
-                    // Draw segment text
-                    gpu.draw_text(
-                        &mut encoder,
-                        &view,
-                        segment,
-                        seg_x + 5.0,
-                        53.0,
-                        [0.9, 0.9, 0.9, 1.0],
-                        screen_width,
-                        screen_height,
-                    );
+                gpu.draw_text(&mut encoder, &view, "名称", col_name, Self::text_y_centered(gpu, header_y, header_h), text_secondary, sw, sh);
+                gpu.draw_text(&mut encoder, &view, "类型", col_type, Self::text_y_centered(gpu, header_y, header_h), text_secondary, sw, sh);
+                gpu.draw_text(&mut encoder, &view, "大小", col_size, Self::text_y_centered(gpu, header_y, header_h), text_secondary, sw, sh);
+                gpu.draw_text(&mut encoder, &view, "修改时间", col_date, Self::text_y_centered(gpu, header_y, header_h), text_secondary, sw, sh);
 
-                    // Separator
-                    if i < segments.len() - 1 {
-                        gpu.draw_rect(
-                            &mut encoder,
-                            &view,
-                            seg_x + 85.0,
-                            53.0,
-                            2.0,
-                            10.0,
-                            [0.4, 0.4, 0.4, 1.0],
-                            screen_width,
-                            screen_height,
-                        );
-                    }
-
-                    seg_x += 95.0;
-                }
-
-                // Draw breadcrumb border
-                gpu.draw_rect(
-                    &mut encoder,
-                    &view,
-                    201.0,
-                    76.0,
-                    screen_width - 201.0,
-                    1.0,
-                    [0.3, 0.3, 0.3, 1.0],
-                    screen_width,
-                    screen_height,
-                );
-
-                // Draw file list area with hover effect
-                let file_color = Self::get_area_color_static(hovered_area, HoveredArea::FileList, [0.11, 0.11, 0.11, 1.0]);
-                gpu.draw_rect(
-                    &mut encoder,
-                    &view,
-                    201.0,
-                    77.0,
-                    screen_width - 201.0,
-                    screen_height - 107.0,
-                    file_color,
-                    screen_width,
-                    screen_height,
-                );
-
-                // Draw column headers with text
-                let headers = [
-                    ("Name", 215.0, 200.0),
-                    ("Date", 420.0, 120.0),
-                    ("Type", 545.0, 100.0),
-                    ("Size", 650.0, 80.0),
-                ];
-
-                for (header_name, x, width) in headers.iter() {
-                    gpu.draw_rect(
-                        &mut encoder,
-                        &view,
-                        *x,
-                        82.0,
-                        *width,
-                        25.0,
-                        [0.16, 0.16, 0.16, 1.0],
-                        screen_width,
-                        screen_height,
-                    );
-
-                    // Draw header text
-                    gpu.draw_text(
-                        &mut encoder,
-                        &view,
-                        header_name,
-                        *x + 10.0,
-                        88.0,
-                        [0.7, 0.7, 0.7, 1.0],
-                        screen_width,
-                        screen_height,
-                    );
-                }
-
-                // Draw file items with text
+                // File rows
                 let files = [
-                    ("Project_A", "2024-01-15", "Folder", "4.2 GB"),
-                    ("Document.pdf", "2024-01-14", "PDF", "2.3 MB"),
-                    ("Image.png", "2024-01-13", "PNG", "1.5 MB"),
-                    ("Video.mp4", "2024-01-12", "MP4", "250 MB"),
-                    ("Archive.zip", "2024-01-11", "ZIP", "45 MB"),
+                    ("📁", "components", "文件夹", "", "2026-08-31"),
+                    ("📁", "utils", "文件夹", "", "2026-08-30"),
+                    ("🦀", "main.rs", "Rust 源代码", "4.2 KB", "2026-08-29"),
+                    ("🦀", "lib.rs", "Rust 源代码", "1.8 KB", "2026-08-28"),
+                    ("📝", "README.md", "Markdown", "2.4 KB", "2026-08-27"),
+                    ("🖼️", "logo.png", "PNG 图片", "128 KB", "2026-08-26"),
+                    ("📕", "report.pdf", "PDF 文档", "5.8 MB", "2026-08-25"),
                 ];
 
-                for (i, (name, date, file_type, size)) in files.iter().enumerate() {
-                    let y = 115.0 + i as f32 * 35.0;
-                    let is_selected = i == 0;
-                    let is_hovered = self.mouse_y >= y
-                        && self.mouse_y < y + 35.0
-                        && self.mouse_x >= 201.0
-                        && self.mouse_x < screen_width;
+                for (i, (icon, name, ftype, size, date)) in files.iter().enumerate() {
+                    let ry = header_y + header_h + i as f32 * row_h;
+                    if ry + row_h > sh - status_h { break; }
 
-                    let file_item_color = if is_selected {
-                        [0.25, 0.35, 0.5, 1.0]
-                    } else if is_hovered {
-                        [0.18, 0.18, 0.18, 1.0]
+                    let is_selected = i == 2;
+                    let row_color = if is_selected {
+                        primary
+                    } else if self.mouse_y >= ry && self.mouse_y < ry + row_h && self.mouse_x > sidebar_w {
+                        primary_light
                     } else {
-                        [0.13, 0.13, 0.13, 1.0]
+                        bg_base
                     };
+                    let text_color = if is_selected { [1.0, 1.0, 1.0, 1.0] } else { text_primary };
+                    let sub_color = if is_selected { [0.8, 0.9, 1.0, 1.0] } else { text_secondary };
 
-                    gpu.draw_rect(
-                        &mut encoder,
-                        &view,
-                        215.0,
-                        y,
-                        screen_width - 230.0,
-                        30.0,
-                        file_item_color,
-                        screen_width,
-                        screen_height,
-                    );
+                    gpu.draw_rect(&mut encoder, &view, main_x, ry, main_w, row_h, row_color, sw, sh);
+                    gpu.draw_rect(&mut encoder, &view, main_x, ry + row_h - 1.0, main_w, 1.0, border, sw, sh);
 
-                    // Draw file name
-                    gpu.draw_text(
-                        &mut encoder,
-                        &view,
-                        name,
-                        225.0,
-                        y + 8.0,
-                        [0.9, 0.9, 0.9, 1.0],
-                        screen_width,
-                        screen_height,
-                    );
-
-                    // Draw date
-                    gpu.draw_text(
-                        &mut encoder,
-                        &view,
-                        date,
-                        430.0,
-                        y + 8.0,
-                        [0.7, 0.7, 0.7, 1.0],
-                        screen_width,
-                        screen_height,
-                    );
-
-                    // Draw type
-                    gpu.draw_text(
-                        &mut encoder,
-                        &view,
-                        file_type,
-                        555.0,
-                        y + 8.0,
-                        [0.7, 0.7, 0.7, 1.0],
-                        screen_width,
-                        screen_height,
-                    );
-
-                    // Draw size
-                    gpu.draw_text(
-                        &mut encoder,
-                        &view,
-                        size,
-                        660.0,
-                        y + 8.0,
-                        [0.7, 0.7, 0.7, 1.0],
-                        screen_width,
-                        screen_height,
-                    );
+                    gpu.draw_text(&mut encoder, &view, icon, main_x + 8.0, Self::text_y_centered(gpu, ry, row_h), text_color, sw, sh);
+                    gpu.draw_text(&mut encoder, &view, name, col_name, Self::text_y_centered(gpu, ry, row_h), text_color, sw, sh);
+                    gpu.draw_text(&mut encoder, &view, ftype, col_type, Self::text_y_centered(gpu, ry, row_h), sub_color, sw, sh);
+                    if !size.is_empty() {
+                        gpu.draw_text(&mut encoder, &view, size, col_size, Self::text_y_centered(gpu, ry, row_h), sub_color, sw, sh);
+                    }
+                    gpu.draw_text(&mut encoder, &view, date, col_date, Self::text_y_centered(gpu, ry, row_h), sub_color, sw, sh);
                 }
 
-                // Draw status bar with hover effect
-                let status_color = Self::get_area_color_static(hovered_area, HoveredArea::StatusBar, [0.15, 0.15, 0.15, 1.0]);
-                gpu.draw_rect(
-                    &mut encoder,
-                    &view,
-                    0.0,
-                    screen_height - 30.0,
-                    screen_width,
-                    30.0,
-                    status_color,
-                    screen_width,
-                    screen_height,
-                );
+                // === STATUS BAR ===
+                let status_y = sh - status_h;
+                gpu.draw_rect(&mut encoder, &view, 0.0, status_y, sw, status_h, bg_secondary, sw, sh);
+                gpu.draw_rect(&mut encoder, &view, 0.0, status_y, sw, 1.0, border, sw, sh);
 
-                // Draw status bar border
-                gpu.draw_rect(
-                    &mut encoder,
-                    &view,
-                    0.0,
-                    screen_height - 30.0,
-                    screen_width,
-                    1.0,
-                    [0.3, 0.3, 0.3, 1.0],
-                    screen_width,
-                    screen_height,
-                );
+                // Vim mode indicator
+                gpu.draw_rect(&mut encoder, &view, 12.0, status_y + 8.0, 52.0, 14.0, text_primary, sw, sh);
+                gpu.draw_text(&mut encoder, &view, "NORMAL", 14.0, Self::text_y_centered(gpu, status_y + 8.0, 14.0), [1.0, 1.0, 1.0, 1.0], sw, sh);
 
-                // Draw status bar sections with text
-                let status_sections = [
-                    ("5 items", 10.0, 80.0),
-                    ("1 selected", 100.0, 100.0),
-                    ("Layout: Single", screen_width - 150.0, 140.0),
-                ];
+                // Path
+                gpu.draw_text(&mut encoder, &view, "D:\\work_space\\personal_workspace\\src", 72.0, Self::text_y_centered(gpu, status_y, status_h), text_secondary, sw, sh);
 
-                for (text, x, width) in status_sections.iter() {
-                    gpu.draw_rect(
-                        &mut encoder,
-                        &view,
-                        *x,
-                        screen_height - 25.0,
-                        *width,
-                        20.0,
-                        [0.2, 0.2, 0.2, 1.0],
-                        screen_width,
-                        screen_height,
-                    );
-
-                    // Draw status text
-                    gpu.draw_text(
-                        &mut encoder,
-                        &view,
-                        text,
-                        *x + 5.0,
-                        screen_height - 20.0,
-                        [0.7, 0.7, 0.7, 1.0],
-                        screen_width,
-                        screen_height,
-                    );
-                }
+                // File count
+                gpu.draw_text(&mut encoder, &view, "7 个项目", sw - 80.0, Self::text_y_centered(gpu, status_y, status_h), text_secondary, sw, sh);
 
                 gpu.queue.submit(std::iter::once(encoder.finish()));
                 gpu.end_frame(frame);

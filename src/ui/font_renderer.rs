@@ -64,11 +64,8 @@ impl FontRenderer {
         let mut pixels = vec![0u8; (width * height * 4) as usize];
         
         outlined.draw(|x, y, coverage| {
-            let px = x as i32 + bounds.min.x as i32;
-            let py = y as i32 + bounds.min.y as i32;
-            
-            if px >= 0 && py >= 0 && (px as u32) < width && (py as u32) < height {
-                let idx = ((py as u32 * width + px as u32) * 4) as usize;
+            if x < width && y < height {
+                let idx = ((y * width + x) * 4) as usize;
                 if idx + 3 < pixels.len() {
                     pixels[idx] = 255;
                     pixels[idx + 1] = 255;
@@ -122,6 +119,16 @@ impl FontRenderer {
     
     pub fn font_size(&self) -> f32 {
         self.font_size
+    }
+    
+    pub fn line_height(&self) -> f32 {
+        let scale_font = self.font.as_scaled(PxScale::from(self.font_size));
+        scale_font.height()
+    }
+    
+    pub fn ascent(&self) -> f32 {
+        let scale_font = self.font.as_scaled(PxScale::from(self.font_size));
+        scale_font.ascent()
     }
     
     pub fn glyph_cache(&self) -> &HashMap<GlyphId, RasterizedGlyph> {
