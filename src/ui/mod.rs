@@ -5,6 +5,7 @@ pub mod file_list;
 pub mod layout;
 pub mod panel_container;
 pub mod renderer;
+pub mod sidebar;
 pub mod tab_bar;
 pub mod theme;
 
@@ -15,5 +16,6 @@ pub use file_list::{FileList, FileItem, Column, SortColumn, SortOrder, Selection
 pub use layout::{LayoutEngine, LayoutConstraint};
 pub use panel_container::{PanelContainer, DividerDragState};
 pub use renderer::GpuContext;
+pub use sidebar::{Sidebar, SidebarPosition, SidebarItem};
 pub use tab_bar::{TabBar, Tab, TabDragState};
 pub use theme::{Color, Theme, ThemeColors};
