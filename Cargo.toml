@@ -6,3 +6,17 @@ description = "A modern file explorer built with Rust and GPU acceleration"
 authors = ["Zero Explorer Team"]
 
 [dependencies]
+# Window management
+winit = "0.29"
+
+# GPU rendering
+wgpu = "0.19"
+pollster = "0.3"
+
+# Logging
+log = "0.4"
+env_logger = "0.11"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
