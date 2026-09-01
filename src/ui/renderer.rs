@@ -8,8 +8,6 @@ pub struct GpuContext {
     pub surface: wgpu::Surface<'static>,
     pub surface_config: wgpu::SurfaceConfiguration,
     pub shape_pipeline: Option<wgpu::RenderPipeline>,
-    pub shape_vertex_buffer: Option<wgpu::Buffer>,
-    pub shape_index_buffer: Option<wgpu::Buffer>,
 }
 
 #[repr(C)]
@@ -169,8 +167,6 @@ impl GpuContext {
             surface,
             surface_config: config,
             shape_pipeline: Some(shape_pipeline),
-            shape_vertex_buffer: None,
-            shape_index_buffer: None,
         })
     }
 
@@ -305,6 +301,3 @@ impl GpuContext {
         render_pass.draw_indexed(0..6, 0, 0..1);
     }
 }
-
-// Need to add bytemuck derive to Cargo.toml
-// This is a simplified version - in production you'd use ab_glyph for text
