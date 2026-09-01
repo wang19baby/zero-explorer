@@ -5,6 +5,7 @@ pub mod breadcrumb;
 pub mod column_view;
 pub mod components;
 pub mod file_list;
+pub mod font_renderer;
 pub mod gallery_view;
 pub mod layout;
 pub mod panel_container;

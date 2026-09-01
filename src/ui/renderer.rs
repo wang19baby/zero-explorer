@@ -2,7 +2,7 @@ use std::sync::Arc;
 use wgpu::util::DeviceExt;
 use winit::window::Window;
 
-use ab_glyph::{FontVec, PxScale, GlyphId, Font, ScaleFont};
+use super::font_renderer::FontRenderer;
 
 pub struct GpuContext {
     pub device: wgpu::Device,
@@ -11,15 +11,11 @@ pub struct GpuContext {
     pub surface_config: wgpu::SurfaceConfiguration,
     pub shape_pipeline: Option<wgpu::RenderPipeline>,
     pub text_pipeline: Option<wgpu::RenderPipeline>,
-    pub font: Option<FontData>,
+    pub font_renderer: Option<FontRenderer>,
     pub atlas: TextureAtlas,
 }
 
-pub struct FontData {
-    pub font: FontVec,
-    pub font_size: f32,
-}
-
+/// 纹理图集 - 管理字形纹理
 pub struct TextureAtlas {
     pub texture: Option<wgpu::Texture>,
     pub texture_view: Option<wgpu::TextureView>,
@@ -28,16 +24,15 @@ pub struct TextureAtlas {
     pub cursor_x: u32,
     pub cursor_y: u32,
     pub row_height: u32,
-    pub glyph_cache: std::collections::HashMap<GlyphId, AtlasGlyph>,
+    pub glyph_positions: std::collections::HashMap<ab_glyph::GlyphId, AtlasPosition>,
 }
 
-#[derive(Clone)]
-pub struct AtlasGlyph {
+#[derive(Clone, Debug)]
+pub struct AtlasPosition {
     pub x: u32,
     pub y: u32,
     pub width: u32,
     pub height: u32,
-    pub advance: f32,
 }
 
 #[repr(C)]
@@ -186,8 +181,8 @@ impl TextureAtlas {
             address_mode_u: wgpu::AddressMode::ClampToEdge,
             address_mode_v: wgpu::AddressMode::ClampToEdge,
             address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
+            mag_filter: wgpu::FilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
             mipmap_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });
@@ -215,8 +210,77 @@ impl TextureAtlas {
             cursor_x: 0,
             cursor_y: 0,
             row_height: 0,
-            glyph_cache: std::collections::HashMap::new(),
+            glyph_positions: std::collections::HashMap::new(),
         }
+    }
+    
+    /// 上传字形到纹理图集
+    pub fn upload_glyph(
+        &mut self,
+        glyph_id: ab_glyph::GlyphId,
+        width: u32,
+        height: u32,
+        pixels: &[u8],
+        queue: &wgpu::Queue,
+    ) -> Option<AtlasPosition> {
+        // 检查是否已经存在
+        if let Some(pos) = self.glyph_positions.get(&glyph_id) {
+            return Some(pos.clone());
+        }
+        
+        // 检查是否有足够空间
+        if self.cursor_x + width > self.size {
+            // 换行
+            self.cursor_x = 0;
+            self.cursor_y += self.row_height + 1;
+            self.row_height = 0;
+        }
+        
+        if self.cursor_y + height > self.size {
+            // 纹理已满
+            log::warn!("Texture atlas full, cannot upload glyph");
+            return None;
+        }
+        
+        // 上传像素数据
+        if let Some(texture) = &self.texture {
+            queue.write_texture(
+                wgpu::ImageCopyTexture {
+                    texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d {
+                        x: self.cursor_x,
+                        y: self.cursor_y,
+                        z: 0,
+                    },
+                    aspect: wgpu::TextureAspect::All,
+                },
+                pixels,
+                wgpu::ImageDataLayout {
+                    offset: 0,
+                    bytes_per_row: Some(width * 4), // RGBA = 4 bytes per pixel
+                    rows_per_image: Some(height),
+                },
+                wgpu::Extent3d {
+                    width,
+                    height,
+                    depth_or_array_layers: 1,
+                },
+            );
+        }
+        
+        let pos = AtlasPosition {
+            x: self.cursor_x,
+            y: self.cursor_y,
+            width,
+            height,
+        };
+        
+        self.glyph_positions.insert(glyph_id, pos.clone());
+        self.cursor_x += width + 1;
+        self.row_height = self.row_height.max(height);
+        
+        Some(pos)
     }
 }
 
@@ -268,7 +332,7 @@ impl GpuContext {
         };
         surface.configure(&device, &config);
 
-        // Create shape rendering pipeline
+        // 创建形状渲染管线
         let shape_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Shape Shader"),
             source: wgpu::ShaderSource::Wgsl(SHAPE_SHADER.into()),
@@ -316,7 +380,7 @@ impl GpuContext {
             multiview: None,
         });
 
-        // Create text rendering pipeline
+        // 创建文本渲染管线
         let text_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Text Shader"),
             source: wgpu::ShaderSource::Wgsl(TEXT_SHADER.into()),
@@ -389,14 +453,14 @@ impl GpuContext {
 
         let atlas = TextureAtlas::new(&device, &texture_bind_group_layout);
 
-        // Load font
+        // 加载字体并初始化渲染器
         let font_data = Self::load_font();
-        let font = FontVec::try_from_vec(font_data)
-            .map_err(|e| anyhow::anyhow!("Failed to load font: {}", e))?;
-
-        let font_size = 14.0;
+        let font_renderer = FontRenderer::new(font_data, 16.0)
+            .map_err(|e| anyhow::anyhow!("{}", e))?;
 
         log::info!("GPU initialized: {:?}", adapter.get_info());
+        log::info!("Font renderer initialized with {} cached glyphs", 
+            font_renderer.glyph_cache().len());
 
         Ok(Self {
             device,
@@ -405,7 +469,7 @@ impl GpuContext {
             surface_config: config,
             shape_pipeline: Some(shape_pipeline),
             text_pipeline: Some(text_pipeline),
-            font: Some(FontData { font, font_size }),
+            font_renderer: Some(font_renderer),
             atlas,
         })
     }
@@ -554,116 +618,69 @@ impl GpuContext {
         screen_width: f32,
         screen_height: f32,
     ) {
-        let font_data = match &self.font {
-            Some(f) => f,
+        let pipeline = match &self.text_pipeline {
+            Some(p) => p,
             None => return,
         };
 
-        let font = &font_data.font;
-        let font_size = PxScale::from(font_data.font_size);
-        let scale_font = font.as_scaled(font_size);
+        // 收集所有字形数据（先获取 glyph_id，再获取像素数据）
+        let glyph_ids: Vec<ab_glyph::GlyphId> = text.chars()
+            .map(|ch| self.font_renderer.as_ref().map(|fr| fr.glyph_id(ch)).unwrap_or_default())
+            .collect();
+        
+        // 确保所有字形都已光栅化
+        if let Some(fr) = &mut self.font_renderer {
+            for ch in text.chars() {
+                fr.get_glyph(ch);
+            }
+        }
 
         let mut current_x = x;
         let mut vertices: Vec<TextVertex> = Vec::new();
         let mut indices: Vec<u16> = Vec::new();
         let mut vertex_count: u16 = 0;
 
-        for char in text.chars() {
-            let glyph_id = font.glyph_id(char);
-
-            // Get or create glyph in atlas
-            if !self.atlas.glyph_cache.contains_key(&glyph_id) {
-                let glyph = glyph_id.with_scale_and_position(font_size, ab_glyph::point(0.0, 0.0));
-                if let Some(outlined) = font.outline_glyph(glyph) {
-                    let bounds = outlined.px_bounds();
-                    let width = (bounds.width() as u32).max(1);
-                    let height = (bounds.height() as u32).max(1);
-
-                    // Check if we need to move to next row
-                    if self.atlas.cursor_x + width > self.atlas.size {
-                        self.atlas.cursor_x = 0;
-                        self.atlas.cursor_y += self.atlas.row_height + 1;
-                        self.atlas.row_height = 0;
-                    }
-
-                    // Check if we need new texture
-                    if self.atlas.cursor_y + height > self.atlas.size {
-                        // Skip rendering this glyph
-                        current_x += scale_font.h_advance(glyph_id);
-                        continue;
-                    }
-
-                    // Rasterize glyph - use RGBA format for better compatibility
-                    let mut image = vec![0u8; (width * height * 4) as usize];
-                    outlined.draw(|px, py, coverage| {
-                        let idx = ((py * width + px) * 4) as usize;
-                        if idx + 3 < image.len() {
-                            image[idx] = 255;     // R
-                            image[idx + 1] = 255; // G
-                            image[idx + 2] = 255; // B
-                            image[idx + 3] = (coverage * 255.0) as u8; // A
+        for (i, _ch) in text.chars().enumerate() {
+            let glyph_id = glyph_ids[i];
+            
+            // 获取字形数据（不可变借用）
+            let glyph_data = self.font_renderer.as_ref()
+                .and_then(|fr| fr.glyph_cache().get(&glyph_id).cloned());
+            
+            if let Some(glyph_data) = glyph_data {
+                // 确保字形在纹理图集中
+                let atlas_pos = if let Some(pos) = self.atlas.glyph_positions.get(&glyph_id) {
+                    pos.clone()
+                } else {
+                    // 上传字形到纹理
+                    match self.atlas.upload_glyph(
+                        glyph_id,
+                        glyph_data.width,
+                        glyph_data.height,
+                        &glyph_data.pixels,
+                        &self.queue,
+                    ) {
+                        Some(pos) => pos,
+                        None => {
+                            current_x += glyph_data.advance;
+                            continue;
                         }
-                    });
-
-                    // Upload to texture
-                    if let Some(texture) = &self.atlas.texture {
-                        self.queue.write_texture(
-                            wgpu::ImageCopyTexture {
-                                texture,
-                                mip_level: 0,
-                                origin: wgpu::Origin3d {
-                                    x: self.atlas.cursor_x,
-                                    y: self.atlas.cursor_y,
-                                    z: 0,
-                                },
-                                aspect: wgpu::TextureAspect::All,
-                            },
-                            &image,
-                            wgpu::ImageDataLayout {
-                                offset: 0,
-                                bytes_per_row: Some(width * 4),
-                                rows_per_image: Some(height),
-                            },
-                            wgpu::Extent3d {
-                                width,
-                                height,
-                                depth_or_array_layers: 1,
-                            },
-                        );
                     }
-
-                    // Cache glyph
-                    let cache_entry = AtlasGlyph {
-                        x: self.atlas.cursor_x,
-                        y: self.atlas.cursor_y,
-                        width,
-                        height,
-                        advance: scale_font.h_advance(glyph_id),
-                    };
-
-                    self.atlas.glyph_cache.insert(glyph_id, cache_entry);
-                    self.atlas.cursor_x += width + 1;
-                    self.atlas.row_height = self.atlas.row_height.max(height);
-                }
-            }
-
-            if let Some(cached) = self.atlas.glyph_cache.get(&glyph_id) {
-                let glyph_x = current_x;
-                let glyph_y = y;
-
-                // Calculate texture coordinates
-                let tex_x1 = cached.x as f32 / self.atlas.size as f32;
-                let tex_y1 = cached.y as f32 / self.atlas.size as f32;
-                let tex_x2 = (cached.x + cached.width) as f32 / self.atlas.size as f32;
-                let tex_y2 = (cached.y + cached.height) as f32 / self.atlas.size as f32;
-
-                // Screen coordinates
+                };
+                
+                let glyph_x = current_x + glyph_data.bearing_x;
+                let glyph_y = y - glyph_data.bearing_y;
+                
+                let tex_x1 = atlas_pos.x as f32 / self.atlas.size as f32;
+                let tex_y1 = atlas_pos.y as f32 / self.atlas.size as f32;
+                let tex_x2 = (atlas_pos.x + atlas_pos.width) as f32 / self.atlas.size as f32;
+                let tex_y2 = (atlas_pos.y + atlas_pos.height) as f32 / self.atlas.size as f32;
+                
                 let screen_x1 = (glyph_x / screen_width) * 2.0 - 1.0;
                 let screen_y1 = 1.0 - (glyph_y / screen_height) * 2.0;
-                let screen_x2 = ((glyph_x + cached.width as f32) / screen_width) * 2.0 - 1.0;
-                let screen_y2 = 1.0 - ((glyph_y + cached.height as f32) / screen_height) * 2.0;
-
-                // Add vertices
+                let screen_x2 = ((glyph_x + atlas_pos.width as f32) / screen_width) * 2.0 - 1.0;
+                let screen_y2 = 1.0 - ((glyph_y + atlas_pos.height as f32) / screen_height) * 2.0;
+                
                 vertices.push(TextVertex {
                     position: [screen_x1, screen_y1],
                     tex_coord: [tex_x1, tex_y1],
@@ -684,8 +701,7 @@ impl GpuContext {
                     tex_coord: [tex_x1, tex_y2],
                     color,
                 });
-
-                // Add indices
+                
                 indices.push(vertex_count);
                 indices.push(vertex_count + 1);
                 indices.push(vertex_count + 2);
@@ -693,74 +709,57 @@ impl GpuContext {
                 indices.push(vertex_count + 2);
                 indices.push(vertex_count + 3);
                 vertex_count += 4;
-
-                current_x += cached.advance;
+                
+                current_x += glyph_data.advance;
             } else {
-                current_x += scale_font.h_advance(glyph_id);
+                let font_size = self.font_renderer.as_ref().map(|fr| fr.font_size()).unwrap_or(16.0);
+                current_x += font_size * 0.5;
             }
         }
 
-        // Draw text if we have vertices
+        // 渲染文字
         if !vertices.is_empty() {
-            if let (Some(pipeline), Some(bind_group)) = (&self.text_pipeline, &self.atlas.bind_group) {
-                let vertex_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Text Vertex Buffer"),
-                    contents: bytemuck::cast_slice(&vertices),
-                    usage: wgpu::BufferUsages::VERTEX,
-                });
+            let vertex_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Text Vertex Buffer"),
+                contents: bytemuck::cast_slice(&vertices),
+                usage: wgpu::BufferUsages::VERTEX,
+            });
 
-                let index_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Text Index Buffer"),
-                    contents: bytemuck::cast_slice(&indices),
-                    usage: wgpu::BufferUsages::INDEX,
-                });
+            let index_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Text Index Buffer"),
+                contents: bytemuck::cast_slice(&indices),
+                usage: wgpu::BufferUsages::INDEX,
+            });
 
-                let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                    label: Some("Text Render Pass"),
-                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                        view,
-                        resolve_target: None,
-                        ops: wgpu::Operations {
-                            load: wgpu::LoadOp::Load,
-                            store: wgpu::StoreOp::Store,
-                        },
-                    })],
-                    depth_stencil_attachment: None,
-                    timestamp_writes: None,
-                    occlusion_query_set: None,
-                });
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("Text Render Pass"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Load,
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
 
-                render_pass.set_pipeline(pipeline);
+            render_pass.set_pipeline(pipeline);
+            if let Some(bind_group) = &self.atlas.bind_group {
                 render_pass.set_bind_group(0, bind_group, &[]);
-                render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
-                render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
-                render_pass.draw_indexed(0..indices.len() as u32, 0, 0..1);
             }
+            render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+            render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+            render_pass.draw_indexed(0..indices.len() as u32, 0, 0..1);
         }
     }
 
     pub fn measure_text(&self, text: &str) -> f32 {
-        let font_data = match &self.font {
-            Some(f) => f,
-            None => return 0.0,
-        };
-
-        let font = &font_data.font;
-        let font_size = PxScale::from(font_data.font_size);
-        let scale_font = font.as_scaled(font_size);
-
-        let mut width = 0.0;
-
-        for char in text.chars() {
-            let glyph_id = font.glyph_id(char);
-
-            if let Some(cached) = self.atlas.glyph_cache.get(&glyph_id) {
-                width += cached.advance;
-            } else {
-                width += scale_font.h_advance(glyph_id);
-            }
-        }
-
-        width
+        self.font_renderer
+            .as_ref()
+            .map(|fr| fr.measure_text(text))
+            .unwrap_or(0.0)
     }
 }
