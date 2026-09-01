@@ -157,7 +157,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
     var tex_color = textureSample(t_texture, s_sampler, in.tex_coord);
-    return vec4<f32>(in.color.rgb, in.color.a * tex_color.a);
+    return vec4<f32>(in.color.rgb, in.color.a * tex_color.r);
 }
 "#;
 
@@ -570,10 +570,10 @@ impl GpuContext {
 
         for char in text.chars() {
             let glyph_id = font.glyph_id(char);
-            let glyph = glyph_id.with_scale_and_position(font_size, ab_glyph::point(0.0, 0.0));
 
             // Get or create glyph in atlas
             if !self.atlas.glyph_cache.contains_key(&glyph_id) {
+                let glyph = glyph_id.with_scale_and_position(font_size, ab_glyph::point(0.0, 0.0));
                 if let Some(outlined) = font.outline_glyph(glyph) {
                     let bounds = outlined.px_bounds();
                     let width = (bounds.width() as u32).max(1);
@@ -588,18 +588,20 @@ impl GpuContext {
 
                     // Check if we need new texture
                     if self.atlas.cursor_y + height > self.atlas.size {
-                        // For now, just skip rendering
+                        // Skip rendering this glyph
                         current_x += scale_font.h_advance(glyph_id);
-                        vertex_count += 4;
                         continue;
                     }
 
-                    // Rasterize glyph
-                    let mut image = vec![0u8; (width * height) as usize];
+                    // Rasterize glyph - use RGBA format for better compatibility
+                    let mut image = vec![0u8; (width * height * 4) as usize];
                     outlined.draw(|px, py, coverage| {
-                        let idx = (py * width + px) as usize;
-                        if idx < image.len() {
-                            image[idx] = (coverage * 255.0) as u8;
+                        let idx = ((py * width + px) * 4) as usize;
+                        if idx + 3 < image.len() {
+                            image[idx] = 255;     // R
+                            image[idx + 1] = 255; // G
+                            image[idx + 2] = 255; // B
+                            image[idx + 3] = (coverage * 255.0) as u8; // A
                         }
                     });
 
@@ -619,7 +621,7 @@ impl GpuContext {
                             &image,
                             wgpu::ImageDataLayout {
                                 offset: 0,
-                                bytes_per_row: Some(width),
+                                bytes_per_row: Some(width * 4),
                                 rows_per_image: Some(height),
                             },
                             wgpu::Extent3d {
