@@ -1,0 +1,8 @@
+[package]
+name = "zero_explorer"
+version = "0.1.0"
+edition = "2021"
+description = "A modern file explorer built with Rust and GPU acceleration"
+authors = ["Zero Explorer Team"]
+
+[dependencies]
