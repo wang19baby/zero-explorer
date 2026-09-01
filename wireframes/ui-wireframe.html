@@ -247,6 +247,21 @@
     background: var(--paper);
   }
 
+  /* 侧边栏位置切换按钮组 */
+  .sidebar-pos-btns {
+    display: inline-flex;
+    border: 1.2px solid var(--line);
+    border-radius: 5px;
+    overflow: hidden;
+  }
+  .sidebar-pos-btns .tb-btn {
+    border: none;
+    border-radius: 0;
+    border-right: 1px solid var(--line);
+  }
+  .sidebar-pos-btns .tb-btn:last-child { border-right: none; }
+  .sidebar-pos-btns .tb-btn.active { background: var(--ink); color: var(--paper); }
+
   /* 主体：侧栏 + 面板区 */
   .win-body { flex: 1; display: flex; min-height: 0; }
 
@@ -923,9 +938,9 @@
 <!-- ================= 1. 主窗口 ================= -->
 <div class="section-bar" id="s1">
   <span class="num">01</span>
-  <h2>主窗口 · 双面板 + 独立标签</h2>
+  <h2>主窗口 · 双面板 + 侧栏位置切换</h2>
   <span class="tail"></span>
-  <span class="note">日常默认布局</span>
+  <span class="note">侧栏支持左/右切换</span>
 </div>
 
 <div class="frame" data-label="MAIN WINDOW / WIN+MAC/LINUX 一致">
@@ -947,6 +962,11 @@
       </div>
       <div class="tb-search">🔍 搜索… <kbd>Ctrl+F</kbd></div>
       <span class="tb-btn">☰ 视图</span>
+      <span class="tb-btn">⊞ 侧栏</span>
+      <div class="sidebar-pos-btns">
+        <span class="tb-btn active">◧ 左</span>
+        <span class="tb-btn">◨ 右</span>
+      </div>
       <span class="tb-btn">⚙ 设置</span>
     </div>
 
@@ -1025,6 +1045,7 @@
     <!-- 拖拽示意 -->
     <div class="ghost-tab">📑 ui-wireframe.html</div>
     <div class="drop-zone"></div>
+    <div class="callout" style="top:76px;right:180px">侧栏位置切换<br>左/右一键切换</div>
 
     <!-- 状态栏 -->
     <div class="statusbar">
@@ -1254,7 +1275,9 @@
   <div class="frame" data-label="LAYOUT TOKENS" style="padding:20px">
     <div style="font-family:var(--mono);font-size:12px;line-height:2.2">
       <div>面板最小宽度 · <b style="color:var(--accent)">320px</b>（低于则合并标签）</div>
-      <div>侧栏宽度 · <b style="color:var(--accent)">190px</b>（可折叠 Ctrl+B）</div>
+      <div>侧栏宽度 · <b style="color:var(--accent)">200px</b>（可折叠 Ctrl+Shift+B）</div>
+      <div>侧栏位置 · <b style="color:var(--accent)">左/右切换</b>（工具栏 ◧◨ 按钮）</div>
+      <div>侧栏拖拽 · <b style="color:var(--accent)">resize handle</b>（侧栏边缘拖动调整宽度）</div>
       <div>行高（列表） · <b style="color:var(--accent)">28px</b></div>
       <div>状态栏 · <b style="color:var(--accent)">30px</b> · Vim 模式指示常驻</div>
       <div>键盘优先 · 所有操作有等价快捷键</div>
@@ -1264,8 +1287,10 @@
     <div style="font-family:var(--mono);font-size:12px;line-height:2.2">
       <div>分屏 · <b style="color:var(--accent)">wv / wh</b>（Vim 模式）或拖标签到边缘</div>
       <div>切换面板 · <b style="color:var(--accent)">Ctrl+h/l</b> 或 <b style="color:var(--accent)">wt</b> 环形</div>
-      <div>新标签 · <b style=" 间color:var(--accent)">Ctrl+t</b>，关 <b style="color:var(--accent)">Ctrl+w</b></div>
+      <div>新标签 · <b style="color:var(--accent)">Ctrl+t</b>，关 <b style="color:var(--accent)">Ctrl+w</b></div>
       <div>快速过滤 · <b style="color:var(--accent)">Ctrl+F</b>，打字即筛</div>
+      <div>侧栏折叠 · <b style="color:var(--accent)">Ctrl+Shift+B</b></div>
+      <div>侧栏位置 · <b style="color:var(--accent)">工具栏 ◧◨ 按钮</b>切换左/右</div>
       <div>命令面板 · <b style="color:var(--accent)">Ctrl+Shift+P</b>（规划中）</div>
     </div>
   </div>
