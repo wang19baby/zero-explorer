@@ -12,11 +12,7 @@ pub struct GpuContext {
     pub shape_pipeline: Option<wgpu::RenderPipeline>,
     pub text_pipeline: Option<wgpu::RenderPipeline>,
     pub font: Option<FontData>,
-    pub text_texture: Option<wgpu::Texture>,
-    pub text_texture_view: Option<wgpu::TextureView>,
-    pub text_sampler: Option<wgpu::Sampler>,
-    pub text_bind_group: Option<wgpu::BindGroup>,
-    pub glyph_cache: std::collections::HashMap<GlyphId, CachedGlyph>,
+    pub atlas: TextureAtlas,
 }
 
 pub struct FontData {
@@ -24,15 +20,24 @@ pub struct FontData {
     pub font_size: f32,
 }
 
+pub struct TextureAtlas {
+    pub texture: Option<wgpu::Texture>,
+    pub texture_view: Option<wgpu::TextureView>,
+    pub bind_group: Option<wgpu::BindGroup>,
+    pub size: u32,
+    pub cursor_x: u32,
+    pub cursor_y: u32,
+    pub row_height: u32,
+    pub glyph_cache: std::collections::HashMap<GlyphId, AtlasGlyph>,
+}
+
 #[derive(Clone)]
-pub struct CachedGlyph {
-    pub texture_x: u32,
-    pub texture_y: u32,
+pub struct AtlasGlyph {
+    pub x: u32,
+    pub y: u32,
     pub width: u32,
     pub height: u32,
     pub advance: f32,
-    pub offset_x: f32,
-    pub offset_y: f32,
 }
 
 #[repr(C)]
@@ -156,6 +161,65 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
 }
 "#;
 
+impl TextureAtlas {
+    fn new(device: &wgpu::Device, bind_group_layout: &wgpu::BindGroupLayout) -> Self {
+        let size = 1024;
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Text Atlas"),
+            size: wgpu::Extent3d {
+                width: size,
+                height: size,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::R8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+
+        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("Text Sampler"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Text Bind Group"),
+            layout: bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&texture_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+            ],
+        });
+
+        Self {
+            texture: Some(texture),
+            texture_view: Some(texture_view),
+            bind_group: Some(bind_group),
+            size,
+            cursor_x: 0,
+            cursor_y: 0,
+            row_height: 0,
+            glyph_cache: std::collections::HashMap::new(),
+        }
+    }
+}
+
 impl GpuContext {
     pub fn new(window: Arc<Window>) -> anyhow::Result<Self> {
         let size = window.inner_size();
@@ -258,7 +322,6 @@ impl GpuContext {
             source: wgpu::ShaderSource::Wgsl(TEXT_SHADER.into()),
         });
 
-        // Create texture bind group layout
         let texture_bind_group_layout =
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("Text Bind Group Layout"),
@@ -324,51 +387,9 @@ impl GpuContext {
             multiview: None,
         });
 
-        // Create text texture (512x512 atlas)
-        let text_texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("Text Texture"),
-            size: wgpu::Extent3d {
-                width: 512,
-                height: 512,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::R8Unorm,
-            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
-            view_formats: &[],
-        });
+        let atlas = TextureAtlas::new(&device, &texture_bind_group_layout);
 
-        let text_texture_view = text_texture.create_view(&wgpu::TextureViewDescriptor::default());
-
-        let text_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("Text Sampler"),
-            address_mode_u: wgpu::AddressMode::ClampToEdge,
-            address_mode_v: wgpu::AddressMode::ClampToEdge,
-            address_mode_w: wgpu::AddressMode::ClampToEdge,
-            mag_filter: wgpu::FilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            mipmap_filter: wgpu::FilterMode::Nearest,
-            ..Default::default()
-        });
-
-        let text_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Text Bind Group"),
-            layout: &texture_bind_group_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&text_texture_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&text_sampler),
-                },
-            ],
-        });
-
-        // Load font - try multiple fonts
+        // Load font
         let font_data = Self::load_font();
         let font = FontVec::try_from_vec(font_data)
             .map_err(|e| anyhow::anyhow!("Failed to load font: {}", e))?;
@@ -385,22 +406,17 @@ impl GpuContext {
             shape_pipeline: Some(shape_pipeline),
             text_pipeline: Some(text_pipeline),
             font: Some(FontData { font, font_size }),
-            text_texture: Some(text_texture),
-            text_texture_view: Some(text_texture_view),
-            text_sampler: Some(text_sampler),
-            text_bind_group: Some(text_bind_group),
-            glyph_cache: std::collections::HashMap::new(),
+            atlas,
         })
     }
 
     fn load_font() -> Vec<u8> {
-        // Try to load Windows fonts
         let font_paths = [
-            "C:\\Windows\\Fonts\\msyh.ttc",    // Microsoft YaHei
-            "C:\\Windows\\Fonts\\simhei.ttf",   // SimHei
-            "C:\\Windows\\Fonts\\simsun.ttc",   // SimSun
-            "C:\\Windows\\Fonts\\arial.ttf",    // Arial
-            "C:\\Windows\\Fonts\\segoeui.ttf",  // Segoe UI
+            "C:\\Windows\\Fonts\\msyh.ttc",
+            "C:\\Windows\\Fonts\\simhei.ttf",
+            "C:\\Windows\\Fonts\\simsun.ttc",
+            "C:\\Windows\\Fonts\\arial.ttf",
+            "C:\\Windows\\Fonts\\segoeui.ttf",
         ];
 
         for path in &font_paths {
@@ -410,7 +426,6 @@ impl GpuContext {
             }
         }
 
-        // Fallback - this should not happen on Windows
         panic!("No font found!");
     }
 
@@ -428,10 +443,6 @@ impl GpuContext {
             Err(wgpu::SurfaceError::Lost) => {
                 self.surface
                     .configure(&self.device, &self.surface_config);
-                None
-            }
-            Err(wgpu::SurfaceError::OutOfMemory) => {
-                log::error!("Out of GPU memory");
                 None
             }
             Err(e) => {
@@ -534,12 +545,14 @@ impl GpuContext {
 
     pub fn draw_text(
         &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        view: &wgpu::TextureView,
         text: &str,
         x: f32,
         y: f32,
-        _color: [f32; 4],
-        _screen_width: f32,
-        _screen_height: f32,
+        color: [f32; 4],
+        screen_width: f32,
+        screen_height: f32,
     ) {
         let font_data = match &self.font {
             Some(f) => f,
@@ -551,20 +564,37 @@ impl GpuContext {
         let scale_font = font.as_scaled(font_size);
 
         let mut current_x = x;
+        let mut vertices: Vec<TextVertex> = Vec::new();
+        let mut indices: Vec<u16> = Vec::new();
+        let mut vertex_count: u16 = 0;
 
         for char in text.chars() {
             let glyph_id = font.glyph_id(char);
-            let glyph = glyph_id.with_scale_and_position(font_size, ab_glyph::point(current_x, y));
+            let glyph = glyph_id.with_scale_and_position(font_size, ab_glyph::point(0.0, 0.0));
 
-            // Check cache first
-            if !self.glyph_cache.contains_key(&glyph_id) {
-                // Rasterize glyph
+            // Get or create glyph in atlas
+            if !self.atlas.glyph_cache.contains_key(&glyph_id) {
                 if let Some(outlined) = font.outline_glyph(glyph) {
                     let bounds = outlined.px_bounds();
                     let width = (bounds.width() as u32).max(1);
                     let height = (bounds.height() as u32).max(1);
 
-                    // Create glyph image
+                    // Check if we need to move to next row
+                    if self.atlas.cursor_x + width > self.atlas.size {
+                        self.atlas.cursor_x = 0;
+                        self.atlas.cursor_y += self.atlas.row_height + 1;
+                        self.atlas.row_height = 0;
+                    }
+
+                    // Check if we need new texture
+                    if self.atlas.cursor_y + height > self.atlas.size {
+                        // For now, just skip rendering
+                        current_x += scale_font.h_advance(glyph_id);
+                        vertex_count += 4;
+                        continue;
+                    }
+
+                    // Rasterize glyph
                     let mut image = vec![0u8; (width * height) as usize];
                     outlined.draw(|px, py, coverage| {
                         let idx = (py * width + px) as usize;
@@ -573,25 +603,136 @@ impl GpuContext {
                         }
                     });
 
-                    // Simple cache entry (in real implementation, we'd use a texture atlas)
-                    let cache_entry = CachedGlyph {
-                        texture_x: 0,
-                        texture_y: 0,
+                    // Upload to texture
+                    if let Some(texture) = &self.atlas.texture {
+                        self.queue.write_texture(
+                            wgpu::ImageCopyTexture {
+                                texture,
+                                mip_level: 0,
+                                origin: wgpu::Origin3d {
+                                    x: self.atlas.cursor_x,
+                                    y: self.atlas.cursor_y,
+                                    z: 0,
+                                },
+                                aspect: wgpu::TextureAspect::All,
+                            },
+                            &image,
+                            wgpu::ImageDataLayout {
+                                offset: 0,
+                                bytes_per_row: Some(width),
+                                rows_per_image: Some(height),
+                            },
+                            wgpu::Extent3d {
+                                width,
+                                height,
+                                depth_or_array_layers: 1,
+                            },
+                        );
+                    }
+
+                    // Cache glyph
+                    let cache_entry = AtlasGlyph {
+                        x: self.atlas.cursor_x,
+                        y: self.atlas.cursor_y,
                         width,
                         height,
                         advance: scale_font.h_advance(glyph_id),
-                        offset_x: bounds.min.x as f32,
-                        offset_y: bounds.min.y as f32,
                     };
 
-                    self.glyph_cache.insert(glyph_id, cache_entry);
+                    self.atlas.glyph_cache.insert(glyph_id, cache_entry);
+                    self.atlas.cursor_x += width + 1;
+                    self.atlas.row_height = self.atlas.row_height.max(height);
                 }
             }
 
-            if let Some(cached) = self.glyph_cache.get(&glyph_id) {
+            if let Some(cached) = self.atlas.glyph_cache.get(&glyph_id) {
+                let glyph_x = current_x;
+                let glyph_y = y;
+
+                // Calculate texture coordinates
+                let tex_x1 = cached.x as f32 / self.atlas.size as f32;
+                let tex_y1 = cached.y as f32 / self.atlas.size as f32;
+                let tex_x2 = (cached.x + cached.width) as f32 / self.atlas.size as f32;
+                let tex_y2 = (cached.y + cached.height) as f32 / self.atlas.size as f32;
+
+                // Screen coordinates
+                let screen_x1 = (glyph_x / screen_width) * 2.0 - 1.0;
+                let screen_y1 = 1.0 - (glyph_y / screen_height) * 2.0;
+                let screen_x2 = ((glyph_x + cached.width as f32) / screen_width) * 2.0 - 1.0;
+                let screen_y2 = 1.0 - ((glyph_y + cached.height as f32) / screen_height) * 2.0;
+
+                // Add vertices
+                vertices.push(TextVertex {
+                    position: [screen_x1, screen_y1],
+                    tex_coord: [tex_x1, tex_y1],
+                    color,
+                });
+                vertices.push(TextVertex {
+                    position: [screen_x2, screen_y1],
+                    tex_coord: [tex_x2, tex_y1],
+                    color,
+                });
+                vertices.push(TextVertex {
+                    position: [screen_x2, screen_y2],
+                    tex_coord: [tex_x2, tex_y2],
+                    color,
+                });
+                vertices.push(TextVertex {
+                    position: [screen_x1, screen_y2],
+                    tex_coord: [tex_x1, tex_y2],
+                    color,
+                });
+
+                // Add indices
+                indices.push(vertex_count);
+                indices.push(vertex_count + 1);
+                indices.push(vertex_count + 2);
+                indices.push(vertex_count);
+                indices.push(vertex_count + 2);
+                indices.push(vertex_count + 3);
+                vertex_count += 4;
+
                 current_x += cached.advance;
             } else {
                 current_x += scale_font.h_advance(glyph_id);
+            }
+        }
+
+        // Draw text if we have vertices
+        if !vertices.is_empty() {
+            if let (Some(pipeline), Some(bind_group)) = (&self.text_pipeline, &self.atlas.bind_group) {
+                let vertex_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Text Vertex Buffer"),
+                    contents: bytemuck::cast_slice(&vertices),
+                    usage: wgpu::BufferUsages::VERTEX,
+                });
+
+                let index_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Text Index Buffer"),
+                    contents: bytemuck::cast_slice(&indices),
+                    usage: wgpu::BufferUsages::INDEX,
+                });
+
+                let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                    label: Some("Text Render Pass"),
+                    color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                        view,
+                        resolve_target: None,
+                        ops: wgpu::Operations {
+                            load: wgpu::LoadOp::Load,
+                            store: wgpu::StoreOp::Store,
+                        },
+                    })],
+                    depth_stencil_attachment: None,
+                    timestamp_writes: None,
+                    occlusion_query_set: None,
+                });
+
+                render_pass.set_pipeline(pipeline);
+                render_pass.set_bind_group(0, bind_group, &[]);
+                render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
+                render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
+                render_pass.draw_indexed(0..indices.len() as u32, 0, 0..1);
             }
         }
     }
@@ -611,7 +752,7 @@ impl GpuContext {
         for char in text.chars() {
             let glyph_id = font.glyph_id(char);
 
-            if let Some(cached) = self.glyph_cache.get(&glyph_id) {
+            if let Some(cached) = self.atlas.glyph_cache.get(&glyph_id) {
                 width += cached.advance;
             } else {
                 width += scale_font.h_advance(glyph_id);

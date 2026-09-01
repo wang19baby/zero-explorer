@@ -165,13 +165,8 @@ impl App {
         };
     }
 
-    fn get_area_color(&self, area: HoveredArea, base_color: [f32; 4]) -> [f32; 4] {
-        Self::get_area_color_static(self.hovered_area, area, base_color)
-    }
-
     fn get_area_color_static(hovered: HoveredArea, area: HoveredArea, base_color: [f32; 4]) -> [f32; 4] {
         if area == hovered {
-            // Highlight color on hover
             [
                 base_color[0] + 0.05,
                 base_color[1] + 0.05,
@@ -210,8 +205,6 @@ impl App {
 
                 let screen_width = gpu.surface_config.width as f32;
                 let screen_height = gpu.surface_config.height as f32;
-
-                // Compute hover area and colors before GPU operations
                 let hovered_area = self.hovered_area;
 
                 // Draw sidebar (left panel) with hover effect
@@ -228,7 +221,7 @@ impl App {
                     screen_height,
                 );
 
-                // Draw sidebar items (simulated)
+                // Draw sidebar items with text
                 let sidebar_items = [
                     ("This PC", true),
                     ("Desktop", false),
@@ -237,12 +230,12 @@ impl App {
                     ("Pictures", false),
                 ];
 
-                for (i, (_name, is_expanded)) in sidebar_items.iter().enumerate() {
+                for (i, (name, is_expanded)) in sidebar_items.iter().enumerate() {
                     let y = 50.0 + i as f32 * 35.0;
                     let item_color = if self.mouse_y >= y && self.mouse_y < y + 35.0 && self.mouse_x < 200.0 {
-                        [0.25, 0.25, 0.25, 1.0] // Hover
+                        [0.25, 0.25, 0.25, 1.0]
                     } else {
-                        [0.18, 0.18, 0.18, 1.0] // Normal
+                        [0.18, 0.18, 0.18, 1.0]
                     };
 
                     gpu.draw_rect(
@@ -266,11 +259,23 @@ impl App {
                             y + 10.0,
                             10.0,
                             10.0,
-                            [0.4, 0.7, 1.0, 1.0], // Blue indicator
+                            [0.4, 0.7, 1.0, 1.0],
                             screen_width,
                             screen_height,
                         );
                     }
+
+                    // Draw text
+                    gpu.draw_text(
+                        &mut encoder,
+                        &view,
+                        name,
+                        30.0,
+                        y + 8.0,
+                        [0.9, 0.9, 0.9, 1.0],
+                        screen_width,
+                        screen_height,
+                    );
                 }
 
                 // Draw sidebar border
@@ -300,16 +305,16 @@ impl App {
                     screen_height,
                 );
 
-                // Draw tab items (simulated)
+                // Draw tab items with text
                 let tabs = ["Home", "Documents", "Downloads"];
                 let mut tab_x = 210.0;
-                for (i, _tab_name) in tabs.iter().enumerate() {
+                for (i, tab_name) in tabs.iter().enumerate() {
                     let tab_width = 100.0;
                     let is_active = i == 0;
                     let tab_item_color = if is_active {
-                        [0.22, 0.22, 0.22, 1.0] // Active tab
+                        [0.22, 0.22, 0.22, 1.0]
                     } else {
-                        [0.16, 0.16, 0.16, 1.0] // Inactive tab
+                        [0.16, 0.16, 0.16, 1.0]
                     };
 
                     gpu.draw_rect(
@@ -333,11 +338,23 @@ impl App {
                             35.0,
                             tab_width,
                             3.0,
-                            [0.4, 0.7, 1.0, 1.0], // Blue indicator
+                            [0.4, 0.7, 1.0, 1.0],
                             screen_width,
                             screen_height,
                         );
                     }
+
+                    // Draw tab text
+                    gpu.draw_text(
+                        &mut encoder,
+                        &view,
+                        tab_name,
+                        tab_x + 10.0,
+                        15.0,
+                        [0.9, 0.9, 0.9, 1.0],
+                        screen_width,
+                        screen_height,
+                    );
 
                     tab_x += tab_width + 5.0;
                 }
@@ -369,10 +386,10 @@ impl App {
                     screen_height,
                 );
 
-                // Draw breadcrumb segments (simulated)
+                // Draw breadcrumb segments with text
                 let segments = ["This PC", "Documents", "Projects"];
                 let mut seg_x = 215.0;
-                for (i, _segment) in segments.iter().enumerate() {
+                for (i, segment) in segments.iter().enumerate() {
                     // Segment background
                     gpu.draw_rect(
                         &mut encoder,
@@ -382,6 +399,18 @@ impl App {
                         80.0,
                         20.0,
                         [0.2, 0.2, 0.2, 1.0],
+                        screen_width,
+                        screen_height,
+                    );
+
+                    // Draw segment text
+                    gpu.draw_text(
+                        &mut encoder,
+                        &view,
+                        segment,
+                        seg_x + 5.0,
+                        53.0,
+                        [0.9, 0.9, 0.9, 1.0],
                         screen_width,
                         screen_height,
                     );
@@ -431,7 +460,7 @@ impl App {
                     screen_height,
                 );
 
-                // Draw column headers
+                // Draw column headers with text
                 let headers = [
                     ("Name", 215.0, 200.0),
                     ("Date", 420.0, 120.0),
@@ -439,7 +468,7 @@ impl App {
                     ("Size", 650.0, 80.0),
                 ];
 
-                for (_header_name, x, width) in headers.iter() {
+                for (header_name, x, width) in headers.iter() {
                     gpu.draw_rect(
                         &mut encoder,
                         &view,
@@ -451,9 +480,21 @@ impl App {
                         screen_width,
                         screen_height,
                     );
+
+                    // Draw header text
+                    gpu.draw_text(
+                        &mut encoder,
+                        &view,
+                        header_name,
+                        *x + 10.0,
+                        88.0,
+                        [0.7, 0.7, 0.7, 1.0],
+                        screen_width,
+                        screen_height,
+                    );
                 }
 
-                // Draw file items (simulated)
+                // Draw file items with text
                 let files = [
                     ("Project_A", "2024-01-15", "Folder", "4.2 GB"),
                     ("Document.pdf", "2024-01-14", "PDF", "2.3 MB"),
@@ -462,7 +503,7 @@ impl App {
                     ("Archive.zip", "2024-01-11", "ZIP", "45 MB"),
                 ];
 
-                for (i, (_name, _date, _file_type, _size)) in files.iter().enumerate() {
+                for (i, (name, date, file_type, size)) in files.iter().enumerate() {
                     let y = 115.0 + i as f32 * 35.0;
                     let is_selected = i == 0;
                     let is_hovered = self.mouse_y >= y
@@ -471,11 +512,11 @@ impl App {
                         && self.mouse_x < screen_width;
 
                     let file_item_color = if is_selected {
-                        [0.25, 0.35, 0.5, 1.0] // Selected (blue)
+                        [0.25, 0.35, 0.5, 1.0]
                     } else if is_hovered {
-                        [0.18, 0.18, 0.18, 1.0] // Hovered
+                        [0.18, 0.18, 0.18, 1.0]
                     } else {
-                        [0.13, 0.13, 0.13, 1.0] // Normal
+                        [0.13, 0.13, 0.13, 1.0]
                     };
 
                     gpu.draw_rect(
@@ -486,6 +527,54 @@ impl App {
                         screen_width - 230.0,
                         30.0,
                         file_item_color,
+                        screen_width,
+                        screen_height,
+                    );
+
+                    // Draw file name
+                    gpu.draw_text(
+                        &mut encoder,
+                        &view,
+                        name,
+                        225.0,
+                        y + 8.0,
+                        [0.9, 0.9, 0.9, 1.0],
+                        screen_width,
+                        screen_height,
+                    );
+
+                    // Draw date
+                    gpu.draw_text(
+                        &mut encoder,
+                        &view,
+                        date,
+                        430.0,
+                        y + 8.0,
+                        [0.7, 0.7, 0.7, 1.0],
+                        screen_width,
+                        screen_height,
+                    );
+
+                    // Draw type
+                    gpu.draw_text(
+                        &mut encoder,
+                        &view,
+                        file_type,
+                        555.0,
+                        y + 8.0,
+                        [0.7, 0.7, 0.7, 1.0],
+                        screen_width,
+                        screen_height,
+                    );
+
+                    // Draw size
+                    gpu.draw_text(
+                        &mut encoder,
+                        &view,
+                        size,
+                        660.0,
+                        y + 8.0,
+                        [0.7, 0.7, 0.7, 1.0],
                         screen_width,
                         screen_height,
                     );
@@ -518,14 +607,14 @@ impl App {
                     screen_height,
                 );
 
-                // Draw status bar sections
+                // Draw status bar sections with text
                 let status_sections = [
                     ("5 items", 10.0, 80.0),
                     ("1 selected", 100.0, 100.0),
                     ("Layout: Single", screen_width - 150.0, 140.0),
                 ];
 
-                for (_text, x, width) in status_sections.iter() {
+                for (text, x, width) in status_sections.iter() {
                     gpu.draw_rect(
                         &mut encoder,
                         &view,
@@ -534,6 +623,18 @@ impl App {
                         *width,
                         20.0,
                         [0.2, 0.2, 0.2, 1.0],
+                        screen_width,
+                        screen_height,
+                    );
+
+                    // Draw status text
+                    gpu.draw_text(
+                        &mut encoder,
+                        &view,
+                        text,
+                        *x + 5.0,
+                        screen_height - 20.0,
+                        [0.7, 0.7, 0.7, 1.0],
                         screen_width,
                         screen_height,
                     );
