@@ -21,6 +21,14 @@ impl FileType {
             Self::Unknown
         }
     }
+
+    pub fn is_dir(&self) -> bool {
+        *self == Self::Directory
+    }
+
+    pub fn is_file(&self) -> bool {
+        *self == Self::File
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -43,9 +51,7 @@ impl FileInfo {
             .map(|n| n.to_string_lossy().to_string())
             .unwrap_or_default();
 
-        let extension = path
-            .extension()
-            .map(|e| e.to_string_lossy().to_string());
+        let extension = path.extension().map(|e| e.to_string_lossy().to_string());
 
         let is_hidden = name.starts_with('.');
 
@@ -59,6 +65,29 @@ impl FileInfo {
             extension,
             is_hidden,
         })
+    }
+
+    pub fn display_size(&self) -> String {
+        const KB: u64 = 1024;
+        const MB: u64 = KB * 1024;
+        const GB: u64 = MB * 1024;
+
+        match self.size {
+            0 => String::from("0 B"),
+            s if s < KB => format!("{} B", s),
+            s if s < MB => format!("{:.1} KB", s as f64 / KB as f64),
+            s if s < GB => format!("{:.1} MB", s as f64 / MB as f64),
+            s => format!("{:.2} GB", s as f64 / GB as f64),
+        }
+    }
+
+    pub fn display_modified(&self) -> String {
+        self.modified
+            .map(|t| {
+                let datetime: chrono::DateTime<chrono::Local> = t.into();
+                datetime.format("%Y-%m-%d %H:%M").to_string()
+            })
+            .unwrap_or_default()
     }
 }
 
@@ -137,6 +166,19 @@ impl LocalFileSystem {
         Ok(entries)
     }
 
+    pub async fn read_dir_async(path: PathBuf) -> std::io::Result<Vec<FileInfo>> {
+        tokio::task::spawn_blocking(move || Self::read_dir(&path)).await?
+    }
+
+    pub async fn read_dir_sorted_async(
+        path: PathBuf,
+        sort_by: SortBy,
+        ascending: bool,
+    ) -> std::io::Result<Vec<FileInfo>> {
+        tokio::task::spawn_blocking(move || Self::read_dir_sorted(&path, &sort_by, ascending))
+            .await?
+    }
+
     pub fn file_exists(path: &Path) -> bool {
         path.exists()
     }
@@ -185,5 +227,17 @@ impl LocalFileSystem {
         }
 
         drives
+    }
+
+    pub fn get_parent(path: &Path) -> Option<PathBuf> {
+        path.parent().map(|p| p.to_path_buf())
+    }
+
+    pub fn get_extension(path: &Path) -> Option<String> {
+        path.extension().map(|e| e.to_string_lossy().to_string())
+    }
+
+    pub fn get_file_name(path: &Path) -> Option<String> {
+        path.file_name().map(|n| n.to_string_lossy().to_string())
     }
 }
