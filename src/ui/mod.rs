@@ -1,5 +1,6 @@
 pub mod breadcrumb;
 pub mod components;
+pub mod file_list;
 pub mod layout;
 pub mod panel_container;
 pub mod renderer;
@@ -8,6 +9,7 @@ pub mod theme;
 
 pub use breadcrumb::{Breadcrumb, BreadcrumbMode, BreadcrumbSegment};
 pub use components::{Button, Component, ComponentState, Panel, Rect};
+pub use file_list::{FileList, FileItem, Column, SortColumn, SortOrder, SelectionMode};
 pub use layout::{LayoutEngine, LayoutConstraint};
 pub use panel_container::{PanelContainer, DividerDragState};
 pub use renderer::GpuContext;
