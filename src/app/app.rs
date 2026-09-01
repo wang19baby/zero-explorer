@@ -146,6 +146,126 @@ impl App {
                     },
                 );
 
+                let screen_width = gpu.surface_config.width as f32;
+                let screen_height = gpu.surface_config.height as f32;
+
+                // Draw sidebar (left panel)
+                gpu.draw_rect(
+                    &mut encoder,
+                    &view,
+                    0.0,
+                    0.0,
+                    200.0,
+                    screen_height,
+                    [0.15, 0.15, 0.15, 1.0],
+                    screen_width,
+                    screen_height,
+                );
+
+                // Draw sidebar border
+                gpu.draw_rect(
+                    &mut encoder,
+                    &view,
+                    200.0,
+                    0.0,
+                    1.0,
+                    screen_height,
+                    [0.3, 0.3, 0.3, 1.0],
+                    screen_width,
+                    screen_height,
+                );
+
+                // Draw tab bar
+                gpu.draw_rect(
+                    &mut encoder,
+                    &view,
+                    201.0,
+                    0.0,
+                    screen_width - 201.0,
+                    40.0,
+                    [0.18, 0.18, 0.18, 1.0],
+                    screen_width,
+                    screen_height,
+                );
+
+                // Draw tab bar border
+                gpu.draw_rect(
+                    &mut encoder,
+                    &view,
+                    201.0,
+                    40.0,
+                    screen_width - 201.0,
+                    1.0,
+                    [0.3, 0.3, 0.3, 1.0],
+                    screen_width,
+                    screen_height,
+                );
+
+                // Draw breadcrumb/address bar
+                gpu.draw_rect(
+                    &mut encoder,
+                    &view,
+                    201.0,
+                    41.0,
+                    screen_width - 201.0,
+                    35.0,
+                    [0.13, 0.13, 0.13, 1.0],
+                    screen_width,
+                    screen_height,
+                );
+
+                // Draw breadcrumb border
+                gpu.draw_rect(
+                    &mut encoder,
+                    &view,
+                    201.0,
+                    76.0,
+                    screen_width - 201.0,
+                    1.0,
+                    [0.3, 0.3, 0.3, 1.0],
+                    screen_width,
+                    screen_height,
+                );
+
+                // Draw file list area
+                gpu.draw_rect(
+                    &mut encoder,
+                    &view,
+                    201.0,
+                    77.0,
+                    screen_width - 201.0,
+                    screen_height - 107.0,
+                    [0.11, 0.11, 0.11, 1.0],
+                    screen_width,
+                    screen_height,
+                );
+
+                // Draw status bar
+                gpu.draw_rect(
+                    &mut encoder,
+                    &view,
+                    0.0,
+                    screen_height - 30.0,
+                    screen_width,
+                    30.0,
+                    [0.15, 0.15, 0.15, 1.0],
+                    screen_width,
+                    screen_height,
+                );
+
+                // Draw status bar border
+                gpu.draw_rect(
+                    &mut encoder,
+                    &view,
+                    0.0,
+                    screen_height - 30.0,
+                    screen_width,
+                    1.0,
+                    [0.3, 0.3, 0.3, 1.0],
+                    screen_width,
+                    screen_height,
+                );
+
                 gpu.queue.submit(std::iter::once(encoder.finish()));
                 gpu.end_frame(frame);
             }

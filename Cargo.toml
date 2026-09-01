@@ -12,6 +12,11 @@ winit = "0.29"
 # GPU rendering
 wgpu = "0.19"
 pollster = "0.3"
+bytemuck = { version = "1.14", features = ["derive"] }
+
+# Text rendering
+glyph_brush = "0.7"
+ab_glyph = "0.2"
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }

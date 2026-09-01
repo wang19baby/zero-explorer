@@ -317,7 +317,7 @@ impl Component for TabBar {
         false
     }
 
-    fn handle_mouse_button_up(&mut self, x: f32, y: f32) -> bool {
+    fn handle_mouse_button_up(&mut self, _x: f32, _y: f32) -> bool {
         if self.is_dragging() {
             self.end_tab_drag();
             self.set_state(ComponentState::Normal);

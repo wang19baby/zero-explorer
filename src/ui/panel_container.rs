@@ -297,7 +297,7 @@ impl Component for PanelContainer {
             return true;
         }
 
-        if let Some(index) = self.divider_hit_test(x, y) {
+        if let Some(_index) = self.divider_hit_test(x, y) {
             self.set_state(ComponentState::Hovered);
             return true;
         }

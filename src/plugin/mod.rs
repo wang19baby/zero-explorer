@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -95,7 +97,7 @@ impl PluginManager {
     }
 
     pub fn load_plugins(&mut self) -> Result<Vec<String>, String> {
-        let mut loaded = Vec::new();
+        let loaded = Vec::new();
         
         // In real implementation, this would scan the plugin directory
         // and load each plugin

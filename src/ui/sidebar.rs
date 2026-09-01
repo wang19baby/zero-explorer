@@ -195,7 +195,7 @@ impl Component for Sidebar {
         }
     }
 
-    fn handle_mouse_button_up(&mut self, x: f32, y: f32) -> bool {
+    fn handle_mouse_button_up(&mut self, _x: f32, _y: f32) -> bool {
         if self.dragging {
             self.end_drag();
             return true;

@@ -138,7 +138,7 @@ impl ColumnView {
         self.columns.truncate(column_index + 1);
 
         // Add new column with folder contents
-        let mut new_column = Column::new();
+        let new_column = Column::new();
         // In real implementation, we would read the directory here
         // For now, we just create an empty column
         self.columns.push(new_column);
@@ -277,7 +277,7 @@ impl Component for ColumnView {
                 self.move_down();
                 true
             }
-            13 | 39 => {
+            13 => {
                 self.expand_selected();
                 true
             }

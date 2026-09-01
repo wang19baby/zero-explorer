@@ -211,7 +211,7 @@ impl Component for Breadcrumb {
         false
     }
 
-    fn handle_mouse_button_up(&mut self, x: f32, y: f32) -> bool {
+    fn handle_mouse_button_up(&mut self, _x: f32, _y: f32) -> bool {
         if *self.state() == ComponentState::Pressed {
             self.set_state(ComponentState::Hovered);
             return true;

@@ -128,7 +128,7 @@ impl RemoteConnection {
         self.status == RemoteConnectionStatus::Connected
     }
 
-    pub fn list_files(&self, path: &str) -> Result<Vec<RemoteFileInfo>, String> {
+    pub fn list_files(&self, _path: &str) -> Result<Vec<RemoteFileInfo>, String> {
         if !self.is_connected() {
             return Err("Not connected".to_string());
         }
@@ -146,7 +146,7 @@ impl RemoteConnection {
         Ok(())
     }
 
-    pub fn upload(&self, local_path: &PathBuf, remote_path: &str) -> Result<(), String> {
+    pub fn upload(&self, _local_path: &PathBuf, _remote_path: &str) -> Result<(), String> {
         if !self.is_connected() {
             return Err("Not connected".to_string());
         }
@@ -155,7 +155,7 @@ impl RemoteConnection {
         Ok(())
     }
 
-    pub fn download(&self, remote_path: &str, local_path: &PathBuf) -> Result<(), String> {
+    pub fn download(&self, _remote_path: &str, _local_path: &PathBuf) -> Result<(), String> {
         if !self.is_connected() {
             return Err("Not connected".to_string());
         }

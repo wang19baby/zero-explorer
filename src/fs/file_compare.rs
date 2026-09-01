@@ -56,7 +56,7 @@ impl FileDiff {
         let right_lines: Vec<&str> = right_content.lines().collect();
         let mut diff_lines = Vec::new();
         
-        let max_lines = left_lines.len().max(right_lines.len());
+        let _max_lines = left_lines.len().max(right_lines.len());
         let mut left_idx = 0;
         let mut right_idx = 0;
         let mut line_number = 1;
@@ -71,7 +71,7 @@ impl FileDiff {
                     left_idx += 1;
                     right_idx += 1;
                 }
-                (Some(l), Some(r)) => {
+                (Some(l), Some(_r)) => {
                     diff_lines.push(DiffLine::new(line_number, l, DiffLineType::Modified));
                     left_idx += 1;
                     right_idx += 1;
