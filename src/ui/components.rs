@@ -111,6 +111,10 @@ pub trait Component {
     fn handle_key_up(&mut self, _key: u32) -> bool {
         false
     }
+
+    fn handle_char_input(&mut self, _ch: char) -> bool {
+        false
+    }
 }
 
 #[derive(Debug)]

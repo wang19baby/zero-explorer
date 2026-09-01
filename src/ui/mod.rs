@@ -1,3 +1,4 @@
+pub mod breadcrumb;
 pub mod components;
 pub mod layout;
 pub mod panel_container;
@@ -5,6 +6,7 @@ pub mod renderer;
 pub mod tab_bar;
 pub mod theme;
 
+pub use breadcrumb::{Breadcrumb, BreadcrumbMode, BreadcrumbSegment};
 pub use components::{Button, Component, ComponentState, Panel, Rect};
 pub use layout::{LayoutEngine, LayoutConstraint};
 pub use panel_container::{PanelContainer, DividerDragState};
