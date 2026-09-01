@@ -398,3 +398,122 @@ impl Theme {
         &self.colors.text_primary
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_color_new() {
+        let color = Color::new(0.5, 0.6, 0.7, 0.8);
+        assert_eq!(color.r, 0.5);
+        assert_eq!(color.g, 0.6);
+        assert_eq!(color.b, 0.7);
+        assert_eq!(color.a, 0.8);
+    }
+
+    #[test]
+    fn test_color_rgb() {
+        let color = Color::rgb(1.0, 0.0, 0.0);
+        assert_eq!(color.r, 1.0);
+        assert_eq!(color.g, 0.0);
+        assert_eq!(color.b, 0.0);
+        assert_eq!(color.a, 1.0);
+    }
+
+    #[test]
+    fn test_color_from_hex() {
+        let color = Color::from_hex(0xFF0000); // Red
+        assert!(color.r > 0.99);
+        assert!(color.g < 0.01);
+        assert!(color.b < 0.01);
+    }
+
+    #[test]
+    fn test_color_to_u32() {
+        let color = Color::rgb(1.0, 0.0, 0.0); // Red
+        let u32_color = color.to_u32();
+        assert_eq!(u32_color, 0xFFFF0000);
+    }
+
+    #[test]
+    fn test_theme_colors_dark() {
+        let colors = ThemeColors::dark();
+        assert!(colors.background.r < 0.5); // Dark background
+    }
+
+    #[test]
+    fn test_theme_colors_light() {
+        let colors = ThemeColors::light();
+        assert!(colors.background.r > 0.5); // Light background
+    }
+
+    #[test]
+    fn test_theme_dark() {
+        let theme = Theme::dark();
+        assert!(theme.colors.background.r < 0.5);
+        assert_eq!(theme.font_size, 14.0);
+        assert_eq!(theme.row_height, 36.0);
+    }
+
+    #[test]
+    fn test_theme_light() {
+        let theme = Theme::light();
+        assert!(theme.colors.background.r > 0.5);
+        assert_eq!(theme.font_size, 14.0);
+    }
+
+    #[test]
+    fn test_theme_primary() {
+        let theme = Theme::dark();
+        let primary = theme.primary();
+        assert!(primary.r > 0.0);
+    }
+
+    #[test]
+    fn test_theme_manager_new() {
+        let manager = ThemeManager::new();
+        assert_eq!(manager.mode(), ThemeMode::System);
+    }
+
+    #[test]
+    fn test_theme_manager_with_mode() {
+        let manager = ThemeManager::with_mode(ThemeMode::Light);
+        assert_eq!(manager.mode(), ThemeMode::Light);
+        assert!(manager.theme().colors.background.r > 0.5);
+    }
+
+    #[test]
+    fn test_theme_manager_set_mode() {
+        let mut manager = ThemeManager::new();
+        
+        manager.set_mode(ThemeMode::Light);
+        assert_eq!(manager.mode(), ThemeMode::Light);
+        assert!(manager.theme().colors.background.r > 0.5);
+        
+        manager.set_mode(ThemeMode::Dark);
+        assert_eq!(manager.mode(), ThemeMode::Dark);
+        assert!(manager.theme().colors.background.r < 0.5);
+    }
+
+    #[test]
+    fn test_theme_manager_toggle() {
+        let mut manager = ThemeManager::with_mode(ThemeMode::System);
+        
+        manager.toggle();
+        assert_eq!(manager.mode(), ThemeMode::Light);
+        
+        manager.toggle();
+        assert_eq!(manager.mode(), ThemeMode::Dark);
+        
+        manager.toggle();
+        assert_eq!(manager.mode(), ThemeMode::Light);
+    }
+
+    #[test]
+    fn test_theme_mode_display_name() {
+        assert_eq!(ThemeMode::Light.display_name(), "Light");
+        assert_eq!(ThemeMode::Dark.display_name(), "Dark");
+        assert_eq!(ThemeMode::System.display_name(), "System");
+    }
+}

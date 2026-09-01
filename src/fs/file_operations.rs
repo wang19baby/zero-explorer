@@ -245,3 +245,197 @@ impl Default for FileOperations {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_file_operations_new() {
+        let ops = FileOperations::new();
+        assert_eq!(*ops.clipboard(), ClipboardAction::None);
+    }
+
+    #[test]
+    fn test_copy_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let src_dir = temp_dir.path().join("src");
+        std::fs::create_dir(&src_dir).unwrap();
+        std::fs::write(src_dir.join("test.txt"), "hello").unwrap();
+        
+        let mut ops = FileOperations::new();
+        let result = ops.copy(vec![src_dir.join("test.txt")]);
+        
+        assert!(result.success);
+        assert!(matches!(ops.clipboard(), ClipboardAction::Copy(_)));
+    }
+
+    #[test]
+    fn test_cut_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let src_dir = temp_dir.path().join("src");
+        std::fs::create_dir(&src_dir).unwrap();
+        std::fs::write(src_dir.join("test.txt"), "hello").unwrap();
+        
+        let mut ops = FileOperations::new();
+        let result = ops.cut(vec![src_dir.join("test.txt")]);
+        
+        assert!(result.success);
+        assert!(matches!(ops.clipboard(), ClipboardAction::Cut(_)));
+    }
+
+    #[test]
+    fn test_paste_copy_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let src_dir = temp_dir.path().join("src");
+        let dst_dir = temp_dir.path().join("dst");
+        
+        std::fs::create_dir(&src_dir).unwrap();
+        std::fs::create_dir(&dst_dir).unwrap();
+        std::fs::write(src_dir.join("test.txt"), "hello").unwrap();
+        
+        let mut ops = FileOperations::new();
+        ops.copy(vec![src_dir.join("test.txt")]);
+        let result = ops.paste(&dst_dir);
+        
+        assert!(result.success);
+        assert!(dst_dir.join("test.txt").exists());
+        assert!(src_dir.join("test.txt").exists()); // Original still exists
+    }
+
+    #[test]
+    fn test_paste_cut_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let src_dir = temp_dir.path().join("src");
+        let dst_dir = temp_dir.path().join("dst");
+        
+        std::fs::create_dir(&src_dir).unwrap();
+        std::fs::create_dir(&dst_dir).unwrap();
+        std::fs::write(src_dir.join("test.txt"), "hello").unwrap();
+        
+        let mut ops = FileOperations::new();
+        ops.cut(vec![src_dir.join("test.txt")]);
+        let result = ops.paste(&dst_dir);
+        
+        assert!(result.success);
+        assert!(!src_dir.join("test.txt").exists()); // Original removed
+        assert!(dst_dir.join("test.txt").exists());
+    }
+
+    #[test]
+    fn test_delete_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("test.txt");
+        std::fs::write(&file_path, "hello").unwrap();
+        
+        let ops = FileOperations::new();
+        let result = ops.delete(&[file_path.clone()]);
+        
+        assert!(result.success);
+        assert!(!file_path.exists());
+    }
+
+    #[test]
+    fn test_delete_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let dir_path = temp_dir.path().join("test_dir");
+        std::fs::create_dir(&dir_path).unwrap();
+        std::fs::write(dir_path.join("file.txt"), "hello").unwrap();
+        
+        let ops = FileOperations::new();
+        let result = ops.delete(&[dir_path.clone()]);
+        
+        assert!(result.success);
+        assert!(!dir_path.exists());
+    }
+
+    #[test]
+    fn test_rename_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let file_path = temp_dir.path().join("old_name.txt");
+        std::fs::write(&file_path, "hello").unwrap();
+        
+        let ops = FileOperations::new();
+        let result = ops.rename(&file_path, "new_name.txt");
+        
+        assert!(result.success);
+        assert!(!file_path.exists());
+        assert!(temp_dir.path().join("new_name.txt").exists());
+    }
+
+    #[test]
+    fn test_rename_to_existing_name() {
+        let temp_dir = TempDir::new().unwrap();
+        let file1 = temp_dir.path().join("file1.txt");
+        let file2 = temp_dir.path().join("file2.txt");
+        std::fs::write(&file1, "hello").unwrap();
+        std::fs::write(&file2, "world").unwrap();
+        
+        let ops = FileOperations::new();
+        let result = ops.rename(&file1, "file2.txt");
+        
+        assert!(!result.success);
+        assert!(result.message.contains("already exists"));
+    }
+
+    #[test]
+    fn test_create_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let new_dir = temp_dir.path().join("new_folder");
+        
+        let ops = FileOperations::new();
+        let result = ops.create_dir(temp_dir.path(), "new_folder");
+        
+        assert!(result.success);
+        assert!(new_dir.exists());
+    }
+
+    #[test]
+    fn test_create_existing_directory() {
+        let temp_dir = TempDir::new().unwrap();
+        let new_dir = temp_dir.path().join("existing");
+        std::fs::create_dir(&new_dir).unwrap();
+        
+        let ops = FileOperations::new();
+        let result = ops.create_dir(temp_dir.path(), "existing");
+        
+        assert!(!result.success);
+        assert!(result.message.contains("already exists"));
+    }
+
+    #[test]
+    fn test_paste_empty_clipboard() {
+        let temp_dir = TempDir::new().unwrap();
+        
+        let mut ops = FileOperations::new();
+        let result = ops.paste(temp_dir.path());
+        
+        assert!(!result.success);
+        assert!(result.message.contains("Nothing to paste"));
+    }
+
+    #[test]
+    fn test_copy_empty_list() {
+        let mut ops = FileOperations::new();
+        let result = ops.copy(vec![]);
+        
+        assert!(!result.success);
+        assert!(result.message.contains("No files selected"));
+    }
+
+    #[test]
+    fn test_clear_clipboard() {
+        let temp_dir = TempDir::new().unwrap();
+        let src_dir = temp_dir.path().join("src");
+        std::fs::create_dir(&src_dir).unwrap();
+        std::fs::write(src_dir.join("test.txt"), "hello").unwrap();
+        
+        let mut ops = FileOperations::new();
+        ops.copy(vec![src_dir.join("test.txt")]);
+        assert!(matches!(ops.clipboard(), ClipboardAction::Copy(_)));
+        
+        ops.clear_clipboard();
+        assert_eq!(*ops.clipboard(), ClipboardAction::None);
+    }
+}

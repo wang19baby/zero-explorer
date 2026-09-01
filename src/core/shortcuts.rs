@@ -204,3 +204,152 @@ impl Default for ShortcutManager {
         Self::new()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_shortcut_new() {
+        let shortcut = Shortcut::new(65);
+        assert!(!shortcut.ctrl);
+        assert!(!shortcut.shift);
+        assert!(!shortcut.alt);
+        assert_eq!(shortcut.key, 65);
+    }
+
+    #[test]
+    fn test_shortcut_ctrl() {
+        let shortcut = Shortcut::ctrl(67);
+        assert!(shortcut.ctrl);
+        assert!(!shortcut.shift);
+        assert!(!shortcut.alt);
+        assert_eq!(shortcut.key, 67);
+    }
+
+    #[test]
+    fn test_shortcut_shift() {
+        let shortcut = Shortcut::shift(65);
+        assert!(!shortcut.ctrl);
+        assert!(shortcut.shift);
+        assert!(!shortcut.alt);
+    }
+
+    #[test]
+    fn test_shortcut_alt() {
+        let shortcut = Shortcut::alt(37);
+        assert!(!shortcut.ctrl);
+        assert!(!shortcut.shift);
+        assert!(shortcut.alt);
+    }
+
+    #[test]
+    fn test_shortcut_ctrl_shift() {
+        let shortcut = Shortcut::ctrl_shift(78);
+        assert!(shortcut.ctrl);
+        assert!(shortcut.shift);
+        assert!(!shortcut.alt);
+    }
+
+    #[test]
+    fn test_shortcut_display_simple() {
+        let shortcut = Shortcut::new(65);
+        assert_eq!(shortcut.display(), "A");
+    }
+
+    #[test]
+    fn test_shortcut_display_ctrl() {
+        let shortcut = Shortcut::ctrl(67);
+        assert_eq!(shortcut.display(), "Ctrl+C");
+    }
+
+    #[test]
+    fn test_shortcut_display_ctrl_shift() {
+        let shortcut = Shortcut::ctrl_shift(78);
+        assert_eq!(shortcut.display(), "Ctrl+Shift+N");
+    }
+
+    #[test]
+    fn test_shortcut_display_special_keys() {
+        let shortcut = Shortcut::new(13);
+        assert_eq!(shortcut.display(), "Enter");
+        
+        let shortcut = Shortcut::new(27);
+        assert_eq!(shortcut.display(), "Esc");
+        
+        let shortcut = Shortcut::new(116);
+        assert_eq!(shortcut.display(), "F5");
+    }
+
+    #[test]
+    fn test_shortcut_manager_new() {
+        let manager = ShortcutManager::new();
+        assert!(!manager.all_shortcuts().is_empty());
+    }
+
+    #[test]
+    fn test_shortcut_manager_register() {
+        let mut manager = ShortcutManager::new();
+        let shortcut = Shortcut::ctrl(80);
+        
+        manager.register(shortcut, ShortcutAction::Custom("print".to_string()));
+        
+        let action = manager.get_action(&shortcut);
+        assert!(action.is_some());
+        assert_eq!(action.unwrap(), &ShortcutAction::Custom("print".to_string()));
+    }
+
+    #[test]
+    fn test_shortcut_manager_unregister() {
+        let mut manager = ShortcutManager::new();
+        let shortcut = Shortcut::ctrl(67);
+        
+        manager.unregister(&shortcut);
+        
+        let action = manager.get_action(&shortcut);
+        assert!(action.is_none());
+    }
+
+    #[test]
+    fn test_shortcut_manager_get_shortcut() {
+        let manager = ShortcutManager::new();
+        
+        let shortcut = manager.get_shortcut(&ShortcutAction::Copy);
+        assert!(shortcut.is_some());
+        assert_eq!(shortcut.unwrap().key, 67); // C
+    }
+
+    #[test]
+    fn test_shortcut_manager_matches() {
+        let manager = ShortcutManager::new();
+        
+        // Ctrl+C -> Copy
+        let action = manager.matches(true, false, false, 67);
+        assert_eq!(action, Some(&ShortcutAction::Copy));
+        
+        // Ctrl+X -> Cut
+        let action = manager.matches(true, false, false, 88);
+        assert_eq!(action, Some(&ShortcutAction::Cut));
+        
+        // Ctrl+V -> Paste
+        let action = manager.matches(true, false, false, 86);
+        assert_eq!(action, Some(&ShortcutAction::Paste));
+        
+        // Delete -> Delete
+        let action = manager.matches(false, false, false, 46);
+        assert_eq!(action, Some(&ShortcutAction::Delete));
+    }
+
+    #[test]
+    fn test_shortcut_manager_default_shortcuts() {
+        let manager = ShortcutManager::new();
+        
+        // Check some default shortcuts exist
+        assert!(manager.get_action(&Shortcut::ctrl(67)).is_some()); // Ctrl+C
+        assert!(manager.get_action(&Shortcut::ctrl(88)).is_some()); // Ctrl+X
+        assert!(manager.get_action(&Shortcut::ctrl(86)).is_some()); // Ctrl+V
+        assert!(manager.get_action(&Shortcut::ctrl(65)).is_some()); // Ctrl+A
+        assert!(manager.get_action(&Shortcut::ctrl(84)).is_some()); // Ctrl+T
+        assert!(manager.get_action(&Shortcut::ctrl(87)).is_some()); // Ctrl+W
+    }
+}

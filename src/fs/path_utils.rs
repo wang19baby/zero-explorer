@@ -13,7 +13,14 @@ impl PathUtils {
                 ".." => {
                     result.pop();
                 }
-                p => result.push(p),
+                p => {
+                    // Handle Windows drive letters (e.g., "C:")
+                    if p.len() == 2 && p.ends_with(':') {
+                        result.push(format!("{}\\", p));
+                    } else {
+                        result.push(p);
+                    }
+                }
             }
         }
 
