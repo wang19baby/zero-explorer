@@ -1102,8 +1102,8 @@ impl App {
                         let file = &files[i];
                         let ry = header_y + header_h + i as f32 * row_h - scroll_y;
 
-                        // 请求Shell图标 (如果纹理图集中没有)
-                        if !gpu.atlas.icon_positions.contains_key(&file.name) {
+                        // 请求Shell图标 (仅文件夹，文件使用Nerd Font回退)
+                        if file.is_dir && !gpu.atlas.icon_positions.contains_key(&file.name) {
                             gpu.request_shell_icon(&file.path, IconSize::Small);
                         }
 
