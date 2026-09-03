@@ -1240,11 +1240,15 @@ impl App {
                     }
 
                     // Draw horizontal scrollbar if needed (content wider than panel)
-                    let h_content_w = (col_date + 120.0 - panel_x).max(panel_w);
+                    // Content spans from col_name (first column) to col_date + 120.0 (last column end)
+                    let h_content_w = (col_date + 120.0 - col_name).max(panel_w);
                     let needs_h_scroll = h_content_w > panel_w + 1.0;
-                    // Clamp scroll_x to valid range
-                    let max_h_scroll = (h_content_w - panel_w).max(0.0);
-                    self.panel_scroll_x[panel_idx.min(3)] = self.panel_scroll_x[panel_idx.min(3)].min(max_h_scroll);
+                    // Max scroll: rightmost column (col_date+120) aligns with panel right edge
+                    // At max scroll: col_date + 120.0 - scroll_x = panel_x + panel_w
+                    // So max_scroll = col_date + 120.0 - panel_x - panel_w = panel_w * 0.7 + 120.0 - panel_w = 120.0 - panel_w * 0.3
+                    let max_h_scroll = (120.0 - panel_w * 0.3).max(0.0);
+                    // Clamp scroll_x to [0, max_h_scroll]
+                    self.panel_scroll_x[panel_idx.min(3)] = self.panel_scroll_x[panel_idx.min(3)].clamp(0.0, max_h_scroll);
                     let scroll_x = self.panel_scroll_x[panel_idx.min(3)];
                     if needs_h_scroll {
                         let h_scrollbar_y = panel_y + panel_h - panel_status_h - 12.0;
