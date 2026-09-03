@@ -309,7 +309,6 @@ impl App {
         if panel_idx < 4 {
             self.virtual_scroll[panel_idx] = VirtualScrollManager::new(28.0, 600.0);
         }
-        log::info!("navigate: panel={} path={}", panel_idx, path);
     }
 
     /// 返回上一级目录
@@ -322,6 +321,37 @@ impl App {
         if let Some(parent) = std::path::Path::new(&current_path).parent() {
             let parent_str = parent.to_string_lossy().to_string();
             self.navigate_to(panel_idx, &parent_str);
+        }
+    }
+
+    /// 获取当前面板的目录名（用于标签页标题）
+    fn current_dir_name(&self, panel_idx: usize) -> String {
+        let path = if panel_idx == 0 {
+            self.dual_panel.left().path.clone()
+        } else {
+            self.dual_panel.right().path.clone()
+        };
+        std::path::Path::new(&path)
+            .file_name()
+            .map(|n| n.to_string_lossy().to_string())
+            .unwrap_or_else(|| path.clone())
+    }
+
+    /// 获取当前面板的文件数量
+    fn file_count(&self, panel_idx: usize) -> usize {
+        if panel_idx == 0 {
+            self.dual_panel.left().files.len()
+        } else {
+            self.dual_panel.right().files.len()
+        }
+    }
+
+    /// 获取当前面板的选中文件数量
+    fn selected_count(&self, panel_idx: usize) -> usize {
+        if panel_idx == 0 {
+            self.dual_panel.left().selected_indices.len()
+        } else {
+            self.dual_panel.right().selected_indices.len()
         }
     }
 
@@ -355,7 +385,6 @@ impl App {
         window.request_redraw();
 
         event_loop.run(move |event, target| {
-            log::debug!("Event: {:?}", std::mem::discriminant(&event));
             match event {
                 Event::WindowEvent { event, .. } => match event {
                     WindowEvent::CloseRequested => {
@@ -456,7 +485,6 @@ impl App {
                                     let h_amount = if line_x.abs() > 0.01 { line_x * 20.0 } else { line_y * 20.0 };
                                     self.panel_scroll_x[idx] -= h_amount;
                                     self.panel_scroll_x[idx] = self.panel_scroll_x[idx].max(0.0_f32);
-                                    log::debug!("h_scroll: idx={} scroll_x={:.1}", idx, self.panel_scroll_x[idx]);
                                 } else {
                                     let scroll_amount = line_y * 20.0;
                                     self.virtual_scroll[idx].handle_scroll(-scroll_amount);
@@ -466,7 +494,6 @@ impl App {
                                     } else {
                                         self.dual_panel.right_mut().scroll_offset = offset;
                                     }
-                                    log::debug!("v_scroll: idx={} offset={:.1}", idx, offset);
                                 }
                                 self.window.as_ref().unwrap().request_redraw();
                             }
@@ -758,7 +785,7 @@ impl App {
                     let file_area_y = py + breadcrumb_h + tab_h + header_h;
                     let file_area_h = ph - breadcrumb_h - tab_h - header_h - panel_status_h;
 
-                    log::info!("click: panel={} file_area_y={:.0} file_area_h={:.0} mouse=({:.0},{:.0})", panel_idx, file_area_y, file_area_h, self.mouse_x, self.mouse_y);
+                    // click log removed for cleanliness
 
 if self.mouse_y >= file_area_y && self.mouse_y < file_area_y + file_area_h {
                         // 先获取需要的数据，避免借用冲突
@@ -776,7 +803,7 @@ if self.mouse_y >= file_area_y && self.mouse_y < file_area_y + file_area_h {
                         };
                         let row_idx = ((self.mouse_y - file_area_y + scroll_y) / row_h) as usize;
 
-                        log::info!("click: row_idx={} file_count={} scroll_y={:.0}", row_idx, file_count, scroll_y);
+                        // click row log removed
 
                         if row_idx < file_count {
                             let should_swap = (panel_idx == 0 && !self.dual_panel.is_left_active())
@@ -787,7 +814,6 @@ if self.mouse_y >= file_area_y && self.mouse_y < file_area_y + file_area_h {
 
                             let ctrl_held = self.modifiers.control_key();
                             let panel = self.dual_panel.active_mut();
-                            log::info!("click: BEFORE selection={:?}", panel.selected_indices);
 
                             if ctrl_held {
                                 if panel.selected_indices.contains(&row_idx) {
@@ -799,7 +825,6 @@ if self.mouse_y >= file_area_y && self.mouse_y < file_area_y + file_area_h {
                                 panel.selected_indices.clear();
                                 panel.selected_indices.push(row_idx);
                             }
-                            log::info!("click: AFTER  selection={:?}", panel.selected_indices);
 
                             // 双击检测: 同一行 + 300ms 内 → 导航进入文件夹
                             let now = std::time::Instant::now();
@@ -830,8 +855,26 @@ if self.mouse_y >= file_area_y && self.mouse_y < file_area_y + file_area_h {
     }
 
     fn render(&mut self) {
+        // 缓存数据，避免借用冲突
+        let left_name = self.current_dir_name(0);
+        let right_name = self.current_dir_name(1);
+        let left_count = self.file_count(0);
+        let right_count = self.file_count(1);
+        let active_panel = if self.dual_panel.is_left_active() { 0 } else { 1 };
+        let total_files = left_count + right_count;
+        let selected = self.selected_count(active_panel);
+        let _current_path = if active_panel == 0 {
+            self.dual_panel.left().path.clone()
+        } else {
+            self.dual_panel.right().path.clone()
+        };
+        let left_files: Vec<(String, bool)> = self.dual_panel.left().files.iter().take(10).map(|f| (f.name.clone(), f.is_dir)).collect();
+        let right_files: Vec<(String, bool)> = self.dual_panel.right().files.iter().take(10).map(|f| (f.name.clone(), f.is_dir)).collect();
+        let left_path = self.dual_panel.left().path.clone();
+        let right_path = self.dual_panel.right().path.clone();
+        let active_panel_path = if active_panel == 0 { left_path.clone() } else { right_path.clone() };
+
         if let Some(gpu) = &mut self.gpu {
-                log::debug!("render: begin_frame");
                 if let Some(frame) = gpu.begin_frame() {
                     let view = frame
                         .texture
@@ -844,9 +887,8 @@ if self.mouse_y >= file_area_y && self.mouse_y < file_area_y + file_area_h {
                         });
 
                     // 使用主题颜色
-                    let colors = gpu.theme_colors();
+let colors = gpu.theme_colors();
                     let bg_base = colors.bg_primary;
-                    log::debug!("render: bg_base = {:?}", bg_base);
                 let bg_secondary = colors.bg_secondary;
                 let bg_tertiary = colors.bg_tertiary;
                 let border = colors.border;
@@ -912,60 +954,46 @@ if self.mouse_y >= file_area_y && self.mouse_y < file_area_y + file_area_h {
 
                     let mut sy = 12.0f32;
 
-                    // Section: 此电脑
-                    gpu.draw_text_simple(&mut encoder, &view, "此电脑 ▾", sidebar_x + 12.0, Self::text_y_centered(gpu, sy, 20.0), text_secondary, sw, sh);
+                    // Section: 当前面板
+                    gpu.draw_text_simple(&mut encoder, &view, "当前面板 ▾", sidebar_x + 12.0, Self::text_y_centered(gpu, sy, 20.0), text_secondary, sw, sh);
                     sy += 24.0;
 
-                    let disks = [
-                        ("本地磁盘 (C:)", 0.65f32, "120/186 GB"),
-                        ("工作磁盘 (D:)", 0.42f32, "168/400 GB"),
-                        ("数据磁盘 (E:)", 0.78f32, "312/400 GB"),
-                    ];
-                    for (name, pct, info) in disks.iter() {
-                        gpu.draw_text_simple(&mut encoder, &view, name, sidebar_x + 12.0, Self::text_y_centered(gpu, sy, row_h), text_primary, sw, sh);
-                        sy += row_h;
-                        gpu.draw_rect_simple(&mut encoder, &view, sidebar_x + 12.0, sy + 6.0, sidebar_w - 24.0, 4.0, bg_tertiary, sw, sh);
-                        gpu.draw_rect_simple(&mut encoder, &view, sidebar_x + 12.0, sy + 6.0, (sidebar_w - 24.0) * *pct, 4.0, primary, sw, sh);
-                        gpu.draw_text_simple(&mut encoder, &view, info, sidebar_x + 12.0, Self::text_y_centered(gpu, sy + 12.0, 16.0), text_tertiary, sw, sh);
-                        sy += 28.0;
-                    }
+                    // 显示左面板路径
+                    let left_item_bg = if self.mouse_y >= sy && self.mouse_y < sy + row_h && self.mouse_x >= sidebar_x && self.mouse_x < sidebar_x + sidebar_w {
+                        bg_tertiary
+                    } else {
+                        bg_secondary
+                    };
+                    gpu.draw_rect_simple(&mut encoder, &view, sidebar_x + 4.0, sy, sidebar_w - 8.0, row_h, left_item_bg, sw, sh);
+                    gpu.draw_text_simple(&mut encoder, &view, &format!("◧ {} ({})", left_name, left_count), sidebar_x + 12.0, Self::text_y_centered(gpu, sy, row_h), primary, sw, sh);
+                    sy += row_h;
 
-                    sy += 8.0;
-                    // Section: 标签
-                    gpu.draw_text_simple(&mut encoder, &view, "标签", sidebar_x + 12.0, Self::text_y_centered(gpu, sy, 20.0), text_secondary, sw, sh);
-                    sy += 24.0;
-                    let bookmarks = ["D:\\work_space", "E:\\backup", "D:\\projects"];
-                    for bm in bookmarks.iter() {
-                        let item_color = if self.mouse_y >= sy && self.mouse_y < sy + row_h && self.mouse_x >= sidebar_x && self.mouse_x < sidebar_x + sidebar_w {
-                            bg_tertiary
-                        } else {
-                            bg_secondary
-                        };
-                        gpu.draw_rect_simple(&mut encoder, &view, sidebar_x + 4.0, sy, sidebar_w - 8.0, row_h, item_color, sw, sh);
-                        gpu.draw_text_simple(&mut encoder, &view, bm, sidebar_x + 12.0, Self::text_y_centered(gpu, sy, row_h), text_primary, sw, sh);
-                        sy += row_h;
-                    }
-                    gpu.draw_text_simple(&mut encoder, &view, "+ 添加文件夹", sidebar_x + 12.0, Self::text_y_centered(gpu, sy, row_h), primary, sw, sh);
+                    // 显示右面板路径
+                    let right_item_bg = if self.mouse_y >= sy && self.mouse_y < sy + row_h && self.mouse_x >= sidebar_x && self.mouse_x < sidebar_x + sidebar_w {
+                        bg_tertiary
+                    } else {
+                        bg_secondary
+                    };
+                    gpu.draw_rect_simple(&mut encoder, &view, sidebar_x + 4.0, sy, sidebar_w - 8.0, row_h, right_item_bg, sw, sh);
+                    gpu.draw_text_simple(&mut encoder, &view, &format!("◨ {} ({})", right_name, right_count), sidebar_x + 12.0, Self::text_y_centered(gpu, sy, row_h), primary, sw, sh);
                     sy += row_h + 8.0;
 
-                    // Section: 最近访问
-                    gpu.draw_text_simple(&mut encoder, &view, "最近访问", sidebar_x + 12.0, Self::text_y_centered(gpu, sy, 20.0), text_secondary, sw, sh);
+                    // Section: 文件列表 (当前面板的文件)
+                    gpu.draw_text_simple(&mut encoder, &view, "文件列表", sidebar_x + 12.0, Self::text_y_centered(gpu, sy, 20.0), text_secondary, sw, sh);
                     sy += 24.0;
-                    let recents = [
-                        ("main.rs", "2分钟前"),
-                        ("README.md", "1小时前"),
-                        ("logo.png", "昨天"),
-                        ("report.pdf", "3天前"),
-                    ];
-                    for (name, time) in recents.iter() {
-                        // Get icon for this file
+                    // 使用缓存的文件列表
+                    let active_files = if active_panel == 0 { &left_files } else { &right_files };
+                    for (name, is_dir) in active_files.iter() {
                         let file_icon = FileIcon::from_path(name);
-                        let icon_color = file_icon.icon_color();
-                        
+                        let icon_color = if *is_dir { [1.0, 0.8, 0.0, 1.0] } else { file_icon.icon_color() };
                         let icon_y = sy + (row_h - 24.0) / 2.0;
                         gpu.draw_file_icon(&mut encoder, &view, file_icon, icon_color, name, sidebar_x + 12.0, icon_y, 24.0, sw, sh);
                         gpu.draw_text_simple(&mut encoder, &view, name, sidebar_x + 42.0, Self::text_y_centered(gpu, sy, row_h), text_primary, sw, sh);
-                        gpu.draw_text_simple(&mut encoder, &view, time, sidebar_x + 120.0, Self::text_y_centered(gpu, sy, row_h), text_tertiary, sw, sh);
+                        sy += row_h;
+                    }
+                    let total_active = if active_panel == 0 { left_count } else { right_count };
+                    if total_active > 10 {
+                        gpu.draw_text_simple(&mut encoder, &view, &format!("... 还有 {} 项", total_active - 10), sidebar_x + 12.0, Self::text_y_centered(gpu, sy, row_h), text_tertiary, sw, sh);
                         sy += row_h;
                     }
 
@@ -1151,12 +1179,9 @@ if self.mouse_y >= file_area_y && self.mouse_y < file_area_y + file_area_h {
                     gpu.draw_rect_simple(&mut encoder, &view, panel_x, tab_y, panel_w, tab_h, bg_tertiary, sw, sh);
                     gpu.draw_rect_simple(&mut encoder, &view, panel_x, tab_y + tab_h - 1.0, panel_w, 1.0, border, sw, sh);
 
-                    // Tabs (different for each panel)
-                    let tabs = match panel_idx {
-                        0 => vec!["src", "docs"],
-                        1 => vec!["target", "release"],
-                        _ => vec!["2026", "backup"],
-                    };
+                    // Tabs (使用当前目录名)
+                    let current_tab_name = if panel_idx == 0 { &left_name } else { &right_name };
+                    let tabs = vec![current_tab_name.as_str()];
                     let mut tx = panel_x + 4.0;
                     for (i, tab_name) in tabs.iter().enumerate() {
                         let tab_w = gpu.measure_text(tab_name) + 24.0;
@@ -1269,9 +1294,6 @@ if self.mouse_y >= file_area_y && self.mouse_y < file_area_y + file_area_h {
                             panel_idx == 1 && panel_snapshot.selected_indices.contains(&i)
                         };
                         let is_hovered = !is_selected && self.mouse_y >= ry && self.mouse_y < ry + row_h && self.mouse_x > panel_x && self.mouse_x < panel_x + panel_w;
-                        if is_selected {
-                            log::debug!("render: panel={} row={} is_selected=true indices={:?}", panel_idx, i, panel_snapshot.selected_indices);
-                        }
                         let row_color = if is_selected {
                             primary
                         } else if is_hovered {
@@ -1596,15 +1618,13 @@ if self.mouse_y >= file_area_y && self.mouse_y < file_area_y + file_area_h {
                     LayoutType::Top1Bottom2 => 3,
                     LayoutType::FourGrid => 4,
                 };
-                gpu.draw_text_simple(&mut encoder, &view, &format!("{} 个面板", panel_count), status_info_x, Self::text_y_centered(gpu, status_y, status_h), text_secondary, sw, sh);
-                let panel_info_w = gpu.measure_text(&format!("{} 个面板", panel_count));
-                gpu.draw_text_simple(&mut encoder, &view, " · ", status_info_x + panel_info_w, Self::text_y_centered(gpu, status_y, status_h), text_tertiary, sw, sh);
-                let dot_w = gpu.measure_text(" · ");
-                gpu.draw_text_simple(&mut encoder, &view, "1 个选中", status_info_x + panel_info_w + dot_w, Self::text_y_centered(gpu, status_y, status_h), text_secondary, sw, sh);
-                let selected_w = gpu.measure_text("1 个选中");
-                gpu.draw_text_simple(&mut encoder, &view, " · ", status_info_x + panel_info_w + dot_w + selected_w, Self::text_y_centered(gpu, status_y, status_h), text_tertiary, sw, sh);
-                let dot2_w = gpu.measure_text(" · ");
-                gpu.draw_text_simple(&mut encoder, &view, "D:\\work_space\\personal_workspace\\zero-explorer", status_info_x + panel_info_w + dot_w + selected_w + dot2_w, Self::text_y_centered(gpu, status_y, status_h), text_secondary, sw, sh);
+                // 显示真实的面板和选中信息
+                let status_text = if selected > 0 {
+                    format!("{} 个面板 · {} 个选中 · {}", panel_count, selected, active_panel_path)
+                } else {
+                    format!("{} 个面板 · {} 个项目 · {}", panel_count, total_files, active_panel_path)
+                };
+                gpu.draw_text_simple(&mut encoder, &view, &status_text, status_info_x, Self::text_y_centered(gpu, status_y, status_h), text_secondary, sw, sh);
 
                 // Layout toggle (right side) - mini grid icons
                 let layout_x = sw - 160.0;
