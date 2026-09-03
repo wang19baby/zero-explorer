@@ -1166,10 +1166,13 @@ impl App {
                         gpu.draw_rect_simple(&mut encoder, &view, panel_x, ry, panel_w, row_h, row_color, sw, sh);
                         gpu.draw_rect_simple(&mut encoder, &view, panel_x, ry + row_h - 1.0, panel_w, 1.0, border, sw, sh);
 
+                        let panel_right = panel_x + panel_w;
                         let icon_y = ry + (row_h - 24.0) / 2.0;
                         let icon_key = format!("folder:{}", file.name);
 
                         // 文件夹: 使用FolderIconComposer生成真实像素
+                        let icon_x = panel_x + 8.0 - scroll_x;
+                        if icon_x + 24.0 > panel_x && icon_x < panel_right {
                         if file.is_dir {
                             if let Some(icon_pixels) = self.folder_icon_composer.compose(
                                 crate::ui::folder_icons::FolderType::Normal,
@@ -1181,18 +1184,18 @@ impl App {
                                     if let Some(atlas_pos) = gpu.atlas.upload_icon(
                                         &icon_key, 24, 24, &icon_pixels, &gpu.queue,
                                     ) {
-                                        gpu.draw_texture(&mut encoder, &view, &atlas_pos, panel_x + 8.0 - scroll_x, icon_y, 24.0, 24.0, sw, sh);
+                                        gpu.draw_texture(&mut encoder, &view, &atlas_pos, icon_x, icon_y, 24.0, 24.0, sw, sh);
                                     }
                                 } else if let Some(atlas_pos) = gpu.atlas.icon_positions.get(&icon_key).cloned() {
-                                    gpu.draw_texture(&mut encoder, &view, &atlas_pos, panel_x + 8.0 - scroll_x, icon_y, 24.0, 24.0, sw, sh);
+                                    gpu.draw_texture(&mut encoder, &view, &atlas_pos, icon_x, icon_y, 24.0, 24.0, sw, sh);
                                 }
                             }
                         } else {
                             // 普通文件: 尝试Shell图标或Nerd Font字符
-                            gpu.draw_file_icon(&mut encoder, &view, file_icon, icon_color, &file.path, panel_x + 8.0 - scroll_x, icon_y, 24.0, sw, sh);
+                            gpu.draw_file_icon(&mut encoder, &view, file_icon, icon_color, &file.path, icon_x, icon_y, 24.0, sw, sh);
+                        }
                         }
                         // Simple clipping: only draw text if visible within panel
-                        let panel_right = panel_x + panel_w;
                         let name_x = col_name - scroll_x;
                         if name_x + 200.0 > panel_x && name_x < panel_right {
                             gpu.draw_text_simple(&mut encoder, &view, &file.name, name_x, Self::text_y_centered(gpu, ry, row_h), text_color, sw, sh);
