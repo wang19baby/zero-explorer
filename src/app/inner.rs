@@ -55,6 +55,10 @@ pub struct App {
     last_click_time: std::time::Instant,
     last_click_panel: usize,
     last_click_idx: usize,
+    // 路径输入状态
+    path_input_active: [bool; 2],     // 每个面板的路径输入是否激活
+    path_input_text: [String; 2],     // 输入框中的文本
+    path_input_cursor: [usize; 2],    // 光标位置
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -213,6 +217,9 @@ impl App {
             last_click_time: std::time::Instant::now(),
             last_click_panel: 0,
             last_click_idx: 0,
+            path_input_active: [false; 2],
+            path_input_text: [String::new(), String::new()],
+            path_input_cursor: [0; 2],
         };
 
         // 初始化左面板文件数据 - 从磁盘读取
@@ -545,7 +552,75 @@ impl App {
 
     fn handle_key(&mut self, key: &winit::keyboard::Key, modifiers: &winit::keyboard::ModifiersState) {
         use winit::keyboard::{Key, NamedKey};
-        
+
+        // 检查是否有路径输入框激活
+        let active_panel = if self.dual_panel.is_left_active() { 0 } else { 1 };
+
+        // 路径输入模式
+        if self.path_input_active[active_panel] {
+            // 路径输入模式
+            match key {
+                Key::Named(NamedKey::Escape) => {
+                    // 取消输入
+                    self.path_input_active[active_panel] = false;
+                    self.path_input_text[active_panel].clear();
+                }
+                Key::Named(NamedKey::Enter) => {
+                    // 导航到输入的路径
+                    let path = self.path_input_text[active_panel].clone();
+                    if !path.is_empty() {
+                        self.navigate_to(active_panel, &path);
+                    }
+                    self.path_input_active[active_panel] = false;
+                    self.path_input_text[active_panel].clear();
+                }
+                Key::Named(NamedKey::Backspace) => {
+                    // 删除前一个字符
+                    let cursor = self.path_input_cursor[active_panel];
+                    if cursor > 0 {
+                        self.path_input_text[active_panel].remove(cursor - 1);
+                        self.path_input_cursor[active_panel] -= 1;
+                    }
+                }
+                Key::Named(NamedKey::Delete) => {
+                    // 删除后一个字符
+                    let cursor = self.path_input_cursor[active_panel];
+                    if cursor < self.path_input_text[active_panel].len() {
+                        self.path_input_text[active_panel].remove(cursor);
+                    }
+                }
+                Key::Named(NamedKey::ArrowLeft) => {
+                    // 光标左移
+                    if self.path_input_cursor[active_panel] > 0 {
+                        self.path_input_cursor[active_panel] -= 1;
+                    }
+                }
+                Key::Named(NamedKey::ArrowRight) => {
+                    // 光标右移
+                    if self.path_input_cursor[active_panel] < self.path_input_text[active_panel].len() {
+                        self.path_input_cursor[active_panel] += 1;
+                    }
+                }
+                Key::Named(NamedKey::Home) => {
+                    // 光标移到开头
+                    self.path_input_cursor[active_panel] = 0;
+                }
+                Key::Named(NamedKey::End) => {
+                    // 光标移到末尾
+                    self.path_input_cursor[active_panel] = self.path_input_text[active_panel].len();
+                }
+                Key::Character(c) => {
+                    // 插入字符
+                    let cursor = self.path_input_cursor[active_panel];
+                    self.path_input_text[active_panel].insert_str(cursor, c.as_str());
+                    self.path_input_cursor[active_panel] += c.len();
+                }
+                _ => {}
+            }
+            return;
+        }
+
+        // 普通模式
         match key {
             Key::Named(NamedKey::Space) => {
                 self.preview_visible = !self.preview_visible;
@@ -578,12 +653,10 @@ impl App {
             }
             // Backspace: 返回上一级目录
             Key::Named(NamedKey::Backspace) => {
-                let active_panel = if self.dual_panel.is_left_active() { 0 } else { 1 };
                 self.navigate_up(active_panel);
             }
             // Enter: 进入选中的文件夹
             Key::Named(NamedKey::Enter) => {
-                let active_panel = if self.dual_panel.is_left_active() { 0 } else { 1 };
                 let file_path = if active_panel == 0 {
                     self.dual_panel.left().selected_indices.first()
                         .and_then(|&idx| {
@@ -729,6 +802,133 @@ impl App {
                             self.cascade_selected[deeper] = 0;
                         }
                     }
+                }
+            }
+        }
+
+        // Breadcrumb click handling
+        if self.panel_mode == PanelMode::Panels {
+            let breadcrumb_h = 36.0f32;
+            let status_h = 30.0f32;
+            let divider_w = 4.0f32;
+
+            let (main_x, main_w) = if self.sidebar_visible {
+                match self.sidebar_position {
+                    SidebarPosition::Left => (self.sidebar_width + 1.0, sw - self.sidebar_width - 1.0),
+                    SidebarPosition::Right => (0.0, sw - self.sidebar_width - 1.0),
+                }
+            } else {
+                (0.0, sw)
+            };
+
+            let panel_count = match self.layout_type {
+                LayoutType::Single => 1,
+                LayoutType::LeftRight | LayoutType::TopBottom => 2,
+                LayoutType::LeftMidRight | LayoutType::Top2Bottom1 | LayoutType::Top1Bottom2 => 3,
+                LayoutType::FourGrid => 4,
+            };
+
+            for panel_idx in 0..panel_count {
+                let (px, py, pw, _ph) = match self.layout_type {
+                    LayoutType::Single => (main_x, 0.0, main_w, sh - status_h),
+                    LayoutType::LeftRight => {
+                        let pw = (main_w - divider_w) / 2.0;
+                        if panel_idx == 0 { (main_x, 0.0, pw, sh - status_h) } else { (main_x + pw + divider_w, 0.0, pw, sh - status_h) }
+                    }
+                    LayoutType::TopBottom => {
+                        let ph = (sh - status_h - divider_w) / 2.0;
+                        if panel_idx == 0 { (main_x, 0.0, main_w, ph) } else { (main_x, ph + divider_w, main_w, ph) }
+                    }
+                    LayoutType::LeftMidRight => {
+                        let pw = (main_w - divider_w * 2.0) / 3.0;
+                        match panel_idx {
+                            0 => (main_x, 0.0, pw, sh - status_h),
+                            1 => (main_x + pw + divider_w, 0.0, pw, sh - status_h),
+                            _ => (main_x + (pw + divider_w) * 2.0, 0.0, pw, sh - status_h),
+                        }
+                    }
+                    _ => (main_x, 0.0, main_w, sh - status_h),
+                };
+
+                // 检查是否点击了面包屑区域
+                if self.mouse_y >= py && self.mouse_y < py + breadcrumb_h
+                    && self.mouse_x >= px && self.mouse_x < px + pw {
+
+                    let is_path_input = self.path_input_active[panel_idx];
+
+                    if is_path_input {
+                        // 路径输入模式：检查是否点击了输入框外部（取消输入）
+                        let input_x = px + 8.0;
+                        let input_w = pw - 16.0;
+                        let input_y = py + 6.0;
+                        let input_h = 24.0;
+
+                        if !(self.mouse_x >= input_x && self.mouse_x < input_x + input_w
+                            && self.mouse_y >= input_y && self.mouse_y < input_y + input_h) {
+                            // 点击外部，取消输入
+                            self.path_input_active[panel_idx] = false;
+                            self.path_input_text[panel_idx].clear();
+                        }
+                    } else {
+                        // 面包屑模式：双击切换到输入模式
+                        let now = std::time::Instant::now();
+                        let is_double_click = panel_idx == self.last_click_panel
+                            && now.duration_since(self.last_click_time).as_millis() < 300;
+                        self.last_click_time = now;
+                        self.last_click_panel = panel_idx;
+
+                        if is_double_click {
+                            // 双击：切换到路径输入模式
+                            let panel_path = if panel_idx == 0 {
+                                self.dual_panel.left().path.clone()
+                            } else {
+                                self.dual_panel.right().path.clone()
+                            };
+                            self.path_input_active[panel_idx] = true;
+                            self.path_input_text[panel_idx] = panel_path;
+                            self.path_input_cursor[panel_idx] = self.path_input_text[panel_idx].len();
+                        } else {
+                            // 单击：检查是否点击了某个面包屑段
+                            let panel_path = if panel_idx == 0 {
+                                self.dual_panel.left().path.clone()
+                            } else {
+                                self.dual_panel.right().path.clone()
+                            };
+                            let path_components: Vec<std::path::Component> = std::path::Path::new(&panel_path)
+                                .components()
+                                .collect();
+                            let crumbs: Vec<String> = path_components
+                                .iter()
+                                .map(|c| c.as_os_str().to_string_lossy().to_string())
+                                .filter(|s| !s.is_empty())
+                                .collect();
+
+                            // 计算每个面包屑的位置并检查点击
+                            let mut cx = px + 12.0;
+for (i, _crumb) in crumbs.iter().enumerate() {
+                                let text_w = 80.0; // 估算宽度
+                                let separator_w = if i < crumbs.len() - 1 { 24.0 } else { 0.0 };
+                                let total_w = text_w + separator_w;
+
+                                if self.mouse_x >= cx && self.mouse_x < cx + total_w {
+                                    // 点击了这个面包屑段，导航到对应路径
+                                    let target_path: String = crumbs[..=i].join(
+                                        if cfg!(target_os = "windows") { "\\" } else { "/" }
+                                    );
+                                    // 如果是Windows，需要加上盘符后的反斜杠
+                                    let target_path = if cfg!(target_os = "windows") && i == 0 {
+                                        format!("{}\\", target_path)
+                                    } else {
+                                        target_path
+                                    };
+                                    self.navigate_to(panel_idx, &target_path);
+                                    break;
+                                }
+                                cx += total_w;
+                            }
+                        }
+                    }
+                    break;
                 }
             }
         }
@@ -1124,53 +1324,56 @@ let colors = gpu.theme_colors();
                         .map(|c| c.as_os_str().to_string_lossy().to_string())
                         .filter(|s| !s.is_empty())
                         .collect();
-                    let mut cx = panel_x + 12.0;
-                    for (i, crumb) in crumbs.iter().enumerate() {
-                        let color = if i == crumbs.len() - 1 { text_primary } else { text_secondary };
-                        gpu.draw_text_simple(&mut encoder, &view, crumb, cx, Self::text_y_centered(gpu, panel_y, breadcrumb_h), color, sw, sh);
-                        cx += gpu.measure_text(crumb) + 4.0;
-                        if i < crumbs.len() - 1 {
-                            gpu.draw_text_simple(&mut encoder, &view, "/", cx, Self::text_y_centered(gpu, panel_y, breadcrumb_h), text_tertiary, sw, sh);
-                            cx += gpu.measure_text("/") + 8.0;
-                        }
-                    }
 
-                    // Breadcrumb input field (right side)
-                    let input_w = 120.0f32;
-                    let input_x = panel_x + panel_w - input_w - 8.0;
-                    gpu.draw_rect_simple(&mut encoder, &view, input_x, panel_y + 6.0, input_w, 24.0, bg_base, sw, sh);
-                    gpu.draw_rect_simple(&mut encoder, &view, input_x, panel_y + 6.0, input_w, 24.0, border, sw, sh);
-                    gpu.draw_text_simple(&mut encoder, &view, "输入路径...", input_x + 8.0, Self::text_y_centered(gpu, panel_y + 6.0, 24.0), text_tertiary, sw, sh);
+                    let is_path_input = self.path_input_active[panel_idx];
 
-                    // Address bar dropdown (when input is focused)
-                    if panel_idx == 0 && self.mouse_x >= input_x && self.mouse_x <= input_x + input_w 
-                        && self.mouse_y >= panel_y + 6.0 && self.mouse_y <= panel_y + 30.0 {
-                        let dropdown_y = panel_y + 32.0;
-                        let dropdown_h = 120.0;
-                        gpu.draw_rect_simple(&mut encoder, &view, input_x, dropdown_y, input_w, dropdown_h, bg_base, sw, sh);
-                        gpu.draw_rect_simple(&mut encoder, &view, input_x, dropdown_y, input_w, dropdown_h, border, sw, sh);
-                        
-                        // Dropdown header
-                        gpu.draw_rect_simple(&mut encoder, &view, input_x, dropdown_y, input_w, 24.0, bg_tertiary, sw, sh);
-                        gpu.draw_text_simple(&mut encoder, &view, "📑 已打开的 Tab", input_x + 8.0, Self::text_y_centered(gpu, dropdown_y, 24.0), text_secondary, sw, sh);
-                        
-                        // Dropdown items
-                        let items = [
-                            ("面板1:", "src (D:\\work_space\\...\\src)"),
-                            ("面板2:", "target (D:\\work_space\\...\\target)"),
-                            ("面板3:", "2026 (E:\\backup\\2026)"),
-                        ];
-                        let mut iy = dropdown_y + 28.0;
-                        for (name, path) in items.iter() {
-                            let item_bg = if self.mouse_y >= iy && self.mouse_y < iy + 24.0 {
-                                primary_light
-                            } else {
-                                bg_base
-                            };
-                            gpu.draw_rect_simple(&mut encoder, &view, input_x, iy, input_w, 24.0, item_bg, sw, sh);
-                            gpu.draw_text_simple(&mut encoder, &view, name, input_x + 8.0, Self::text_y_centered(gpu, iy, 24.0), text_secondary, sw, sh);
-                            gpu.draw_text_simple(&mut encoder, &view, path, input_x + 50.0, Self::text_y_centered(gpu, iy, 24.0), text_primary, sw, sh);
-                            iy += 24.0;
+                    if is_path_input {
+                        // 路径输入模式：显示可编辑的输入框
+                        let input_x = panel_x + 8.0;
+                        let input_w = panel_w - 16.0;
+                        let input_y = panel_y + 6.0;
+                        let input_h = 24.0;
+
+                        // 输入框背景
+                        gpu.draw_rect_simple(&mut encoder, &view, input_x, input_y, input_w, input_h, bg_base, sw, sh);
+                        gpu.draw_rect_simple(&mut encoder, &view, input_x, input_y, input_w, input_h, primary, sw, sh);
+
+                        // 显示输入文本
+                        let input_text = &self.path_input_text[panel_idx];
+                        let display_text = if input_text.is_empty() { &panel_path } else { input_text };
+                        gpu.draw_text_simple(&mut encoder, &view, display_text, input_x + 8.0, Self::text_y_centered(gpu, input_y, input_h), text_primary, sw, sh);
+
+                        // 光标
+                        let cursor_x = input_x + 8.0 + gpu.measure_text(&display_text[..self.path_input_cursor[panel_idx].min(display_text.len())]);
+                        gpu.draw_rect_simple(&mut encoder, &view, cursor_x, input_y + 4.0, 2.0, input_h - 8.0, primary, sw, sh);
+                    } else {
+                        // 面包屑模式：显示可点击的路径段
+                        let mut cx = panel_x + 12.0;
+                        for (i, crumb) in crumbs.iter().enumerate() {
+                            let is_last = i == crumbs.len() - 1;
+                            let color = if is_last { text_primary } else { text_secondary };
+
+                            // 计算这段的宽度
+                            let text_w = gpu.measure_text(crumb);
+                            let separator_w = if !is_last { gpu.measure_text(" › ") } else { 0.0 };
+                            let total_w = text_w + separator_w;
+
+                            // 检测hover
+                            let is_hover = self.mouse_x >= cx && self.mouse_x < cx + total_w
+                                && self.mouse_y >= panel_y && self.mouse_y < panel_y + breadcrumb_h;
+
+                            // hover时显示背景
+                            if is_hover {
+                                gpu.draw_rect_simple(&mut encoder, &view, cx - 2.0, panel_y + 4.0, total_w + 4.0, breadcrumb_h - 8.0, bg_tertiary, sw, sh);
+                            }
+
+                            gpu.draw_text_simple(&mut encoder, &view, crumb, cx, Self::text_y_centered(gpu, panel_y, breadcrumb_h), color, sw, sh);
+                            cx += text_w;
+
+                            if !is_last {
+                                gpu.draw_text_simple(&mut encoder, &view, " › ", cx, Self::text_y_centered(gpu, panel_y, breadcrumb_h), text_tertiary, sw, sh);
+                                cx += separator_w;
+                            }
                         }
                     }
 
