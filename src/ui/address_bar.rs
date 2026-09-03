@@ -100,11 +100,11 @@ impl AddressBar {
     }
 
     pub fn can_go_back(&self) -> bool {
-        self.history_index.map_or(false, |i| i > 0)
+        self.history_index.is_some_and(|i| i > 0)
     }
 
     pub fn can_go_forward(&self) -> bool {
-        self.history_index.map_or(false, |i| i + 1 < self.history.len())
+        self.history_index.is_some_and(|i| i + 1 < self.history.len())
     }
 
     pub fn can_go_up(&self) -> bool {

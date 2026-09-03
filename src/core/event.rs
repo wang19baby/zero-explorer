@@ -25,8 +25,10 @@ pub enum AppEvent {
     Custom(String),
 }
 
+type EventHandler = Box<dyn Fn(&AppEvent)>;
+
 pub struct EventDispatcher {
-    handlers: Vec<Box<dyn Fn(&AppEvent)>>,
+    handlers: Vec<EventHandler>,
 }
 
 impl EventDispatcher {

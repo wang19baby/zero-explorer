@@ -446,10 +446,8 @@ impl Component for FileList {
             65 => {
                 if self.bounds.contains(self.bounds.x, self.bounds.y) {
                     self.select_all();
-                    true
-                } else {
-                    false
                 }
+                self.bounds.contains(self.bounds.x, self.bounds.y)
             }
             _ => false,
         }

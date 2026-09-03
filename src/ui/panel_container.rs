@@ -178,7 +178,6 @@ impl PanelContainer {
         let mut x = self.bounds.x;
 
         for (i, panel) in self.panels.iter().enumerate() {
-            panel.bounds.x;
             x += panel.bounds.width;
 
             if i < self.panels.len() - 1 {

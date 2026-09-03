@@ -394,7 +394,7 @@ impl TextureAtlas {
         
         // 上传像素数据
         if let Some(texture) = &self.texture {
-            log::debug!("upload_glyph id={} size={}x{} at ({},{}) pixels_len={}", 
+            log::trace!("upload_glyph id={} size={}x{} at ({},{}) pixels_len={}", 
                 glyph_id.0, width, height, self.cursor_x, self.cursor_y, pixels.len());
             
             // 跳过空像素数据（如空格字符）
@@ -469,7 +469,7 @@ impl TextureAtlas {
         
         // 上传像素数据
         if let Some(texture) = &self.texture {
-            log::debug!("upload_icon path={} size={}x{} at ({},{})", 
+            log::trace!("upload_icon path={} size={}x{} at ({},{})", 
                 path, width, height, self.cursor_x, self.cursor_y);
             
             // 跳过空像素数据
@@ -518,13 +518,13 @@ impl TextureAtlas {
 impl GpuContext {
     pub fn new(window: Arc<Window>) -> anyhow::Result<Self> {
         let size = window.inner_size();
-        log::info!("GpuContext::new: window size={}x{}", size.width, size.height);
+        log::trace!("GpuContext::new: window size={}x{}", size.width, size.height);
 
         // 检测可用后端
         let backends = GpuBackendInitializer::detect_available_backends();
-        log::info!("Available backends: {:?}", backends.iter().map(|b| b.name()).collect::<Vec<_>>());
+        log::trace!("Available backends: {:?}", backends.iter().map(|b| b.name()).collect::<Vec<_>>());
         let backend = backends.first().copied().unwrap_or(GpuBackend::Dx12);
-        log::info!("Selected backend: {}", backend.name());
+        log::trace!("Selected backend: {}", backend.name());
 
         // 使用检测到的后端创建Instance
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
@@ -548,7 +548,7 @@ impl GpuContext {
         .ok_or_else(|| anyhow::anyhow!("Failed to find GPU adapter"))?;
 
         let adapter_info = adapter.get_info();
-        log::info!("GPU adapter: {} ({})", adapter_info.name, adapter_info.backend as u32);
+        log::trace!("GPU adapter: {} ({})", adapter_info.name, adapter_info.backend as u32);
 
         // 请求设备
         let (device, queue) = pollster::block_on(adapter.request_device(
@@ -828,35 +828,35 @@ impl GpuContext {
             if let Err(e) = font_renderer.add_fallback_font(icon_data) {
                 log::warn!("Failed to load Nerd Font: {}", e);
             } else {
-                log::info!("Loaded Nerd Font for file icons");
+                log::trace!("Loaded Nerd Font for file icons");
             }
         }
 
         // 创建图标专用字体渲染器（更大字号）
-        log::info!("Creating icon font renderer");
+        log::trace!("Creating icon font renderer");
         let mut icon_font_renderer = FontRenderer::new(icon_primary_data, 20.0)
             .map_err(|e| anyhow::anyhow!("{}", e))?;
-        log::info!("Icon font renderer created");
+        log::trace!("Icon font renderer created");
 
         // 给图标渲染器也加载 Nerd Font
         if let Some(icon_data) = icon_nerd_data {
             if let Err(e) = icon_font_renderer.add_fallback_font(icon_data) {
                 log::warn!("Failed to load Nerd Font for icon renderer: {}", e);
             } else {
-                log::info!("Loaded Nerd Font for icon renderer");
+                log::trace!("Loaded Nerd Font for icon renderer");
             }
         }
 
         // 创建主题管理器 (默认深色主题)
-        log::info!("Creating theme manager");
+        log::trace!("Creating theme manager");
         let theme_manager = ThemeManager::new(ThemeType::Dark);
 
         // 创建Shell图标提取器
-        log::info!("Creating shell icon extractor");
+        log::trace!("Creating shell icon extractor");
         let icon_extractor = ShellIconExtractor::new(NonZeroUsize::new(1000).unwrap());
 
-        log::info!("GPU initialized with backend: {}", backend.name());
-        log::info!("Font renderer initialized with {} cached glyphs", 
+        log::trace!("GPU initialized with backend: {}", backend.name());
+        log::trace!("Font renderer initialized with {} cached glyphs", 
             font_renderer.glyph_cache().len());
 
         Ok(Self {
@@ -1102,7 +1102,7 @@ impl GpuContext {
 
         // 渲染文字
         if !vertices.is_empty() {
-            log::debug!("draw_text '{}': {} vertices, {} indices", params.text, vertices.len(), indices.len());
+            log::trace!("draw_text '{}': {} vertices, {} indices", params.text, vertices.len(), indices.len());
             let vertex_buffer = self.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Text Vertex Buffer"),
                 contents: bytemuck::cast_slice(&vertices),

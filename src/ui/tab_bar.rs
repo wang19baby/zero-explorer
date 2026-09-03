@@ -68,8 +68,7 @@ pub struct TabBar {
 
 impl TabBar {
     pub fn new(id: &str, bounds: Rect) -> Self {
-        let mut tabs = Vec::new();
-        tabs.push(Tab::new(0, "Tab 1", Rect::new(bounds.x, bounds.y, 150.0, TAB_HEIGHT)));
+        let tabs = vec![Tab::new(0, "Tab 1", Rect::new(bounds.x, bounds.y, 150.0, TAB_HEIGHT))];
 
         Self {
             id: id.to_string(),

@@ -1,5 +1,6 @@
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum VimMode {
+    #[default]
     Normal,
     Insert,
     Visual,
@@ -14,12 +15,6 @@ impl VimMode {
             VimMode::Visual => "VISUAL",
             VimMode::Command => "COMMAND",
         }
-    }
-}
-
-impl Default for VimMode {
-    fn default() -> Self {
-        Self::Normal
     }
 }
 

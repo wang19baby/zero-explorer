@@ -331,7 +331,6 @@ impl Default for BatchRenamer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tempfile::TempDir;
 
     #[test]
     fn test_batch_renamer_new() {
@@ -430,7 +429,7 @@ mod tests {
 
     #[test]
     fn test_batch_renamer_undo() {
-        let mut renamer = BatchRenamer::new();
+        let renamer = BatchRenamer::new();
         assert!(!renamer.can_undo());
     }
 }

@@ -85,7 +85,7 @@ impl FileOperations {
         let clipboard = self.clipboard.clone();
         match clipboard {
             ClipboardAction::None => {
-                return FileOperationResult::err("Nothing to paste");
+                FileOperationResult::err("Nothing to paste")
             }
             ClipboardAction::Copy(ref paths) => {
                 let mut errors = Vec::new();

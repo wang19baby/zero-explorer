@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use super::components::{Component, ComponentState, Rect};
 
@@ -46,8 +46,8 @@ impl PreviewPanel {
         }
     }
 
-    pub fn show(&mut self, path: &PathBuf) {
-        self.file_path = Some(path.clone());
+    pub fn show(&mut self, path: &Path) {
+        self.file_path = Some(path.to_path_buf());
         self.file_name = path
             .file_name()
             .map(|n| n.to_string_lossy().to_string())

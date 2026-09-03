@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Tag {
@@ -97,12 +97,12 @@ impl TagManager {
         self.tags.len()
     }
 
-    pub fn add_tag_to_file(&mut self, file_path: &PathBuf, tag_id: &str) -> bool {
+    pub fn add_tag_to_file(&mut self, file_path: &Path, tag_id: &str) -> bool {
         if !self.tags.contains_key(tag_id) {
             return false;
         }
 
-        let tags = self.file_tags.entry(file_path.clone()).or_insert_with(Vec::new);
+        let tags = self.file_tags.entry(file_path.to_path_buf()).or_default();
         if !tags.contains(&tag_id.to_string()) {
             tags.push(tag_id.to_string());
             true
@@ -111,7 +111,7 @@ impl TagManager {
         }
     }
 
-    pub fn remove_tag_from_file(&mut self, file_path: &PathBuf, tag_id: &str) -> bool {
+    pub fn remove_tag_from_file(&mut self, file_path: &Path, tag_id: &str) -> bool {
         if let Some(tags) = self.file_tags.get_mut(file_path) {
             if let Some(pos) = tags.iter().position(|t| t == tag_id) {
                 tags.remove(pos);
@@ -124,7 +124,7 @@ impl TagManager {
         false
     }
 
-    pub fn file_tags(&self, file_path: &PathBuf) -> Vec<&Tag> {
+    pub fn file_tags(&self, file_path: &Path) -> Vec<&Tag> {
         self.file_tags
             .get(file_path)
             .map(|ids| {

@@ -1,4 +1,4 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
 pub struct SystemIntegration;
@@ -68,7 +68,7 @@ impl SystemIntegration {
         }
     }
 
-    pub fn open_file(&self, path: &PathBuf) -> Result<(), String> {
+    pub fn open_file(&self, path: &Path) -> Result<(), String> {
         #[cfg(target_os = "windows")]
         {
             std::process::Command::new("cmd")
@@ -95,7 +95,7 @@ impl SystemIntegration {
         }
     }
 
-    pub fn reveal_in_explorer(&self, path: &PathBuf) -> Result<(), String> {
+    pub fn reveal_in_explorer(&self, path: &Path) -> Result<(), String> {
         #[cfg(target_os = "windows")]
         {
             std::process::Command::new("explorer")
