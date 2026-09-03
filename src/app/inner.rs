@@ -51,6 +51,10 @@ pub struct App {
     virtual_scroll: [VirtualScrollManager; 4],
     // 文件夹图标合成器
     folder_icon_composer: FolderIconComposer,
+    // 双击跟踪
+    last_click_time: std::time::Instant,
+    last_click_panel: usize,
+    last_click_idx: usize,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -206,6 +210,9 @@ impl App {
                 VirtualScrollManager::new(28.0, 600.0),
             ],
             folder_icon_composer: FolderIconComposer::new(std::num::NonZeroUsize::new(100).unwrap()),
+            last_click_time: std::time::Instant::now(),
+            last_click_panel: 0,
+            last_click_idx: 0,
         };
 
         // 初始化左面板文件数据 - 从磁盘读取
@@ -259,6 +266,63 @@ impl App {
         });
 
         app
+    }
+
+    /// 从目录加载文件列表
+    fn load_directory(&self, path: &str) -> Vec<FileEntry> {
+        let dir_path = std::path::Path::new(path);
+        if let Ok(entries) = LocalFileSystem::read_dir_sorted(dir_path, &FsSortBy::Name, true) {
+            entries.into_iter().map(|fi| FileEntry {
+                name: fi.name,
+                path: fi.path.to_string_lossy().to_string(),
+                is_dir: fi.file_type.is_dir(),
+                size: fi.size,
+                modified: fi.modified
+                    .map(|t| t.duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_secs())
+                    .unwrap_or(0),
+                icon_id: 0,
+            }).collect()
+        } else {
+            vec![]
+        }
+    }
+
+    /// 导航到指定路径（面板）
+    fn navigate_to(&mut self, panel_idx: usize, path: &str) {
+        let files = self.load_directory(path);
+        let snapshot = PanelSnapshot {
+            path: path.to_string(),
+            files,
+            selected_indices: vec![],
+            focus_index: 0,
+            scroll_offset: 0.0,
+            sort_by: SortBy::Name,
+            sort_descending: false,
+            view_mode: ViewMode::Details,
+        };
+        if panel_idx == 0 {
+            self.dual_panel.set_left(snapshot);
+        } else {
+            self.dual_panel.set_right(snapshot);
+        }
+        // 重置虚拟滚动
+        if panel_idx < 4 {
+            self.virtual_scroll[panel_idx] = VirtualScrollManager::new(28.0, 600.0);
+        }
+        log::info!("navigate: panel={} path={}", panel_idx, path);
+    }
+
+    /// 返回上一级目录
+    fn navigate_up(&mut self, panel_idx: usize) {
+        let current_path = if panel_idx == 0 {
+            self.dual_panel.left().path.clone()
+        } else {
+            self.dual_panel.right().path.clone()
+        };
+        if let Some(parent) = std::path::Path::new(&current_path).parent() {
+            let parent_str = parent.to_string_lossy().to_string();
+            self.navigate_to(panel_idx, &parent_str);
+        }
     }
 
     pub fn run(&mut self) -> anyhow::Result<()> {
@@ -485,6 +549,39 @@ impl App {
             Key::Character(c) if c.as_str() == "?" => {
                 self.vim_help_visible = !self.vim_help_visible;
             }
+            // Backspace: 返回上一级目录
+            Key::Named(NamedKey::Backspace) => {
+                let active_panel = if self.dual_panel.is_left_active() { 0 } else { 1 };
+                self.navigate_up(active_panel);
+            }
+            // Enter: 进入选中的文件夹
+            Key::Named(NamedKey::Enter) => {
+                let active_panel = if self.dual_panel.is_left_active() { 0 } else { 1 };
+                let file_path = if active_panel == 0 {
+                    self.dual_panel.left().selected_indices.first()
+                        .and_then(|&idx| {
+                            let files = &self.dual_panel.left().files;
+                            if idx < files.len() && files[idx].is_dir {
+                                Some(files[idx].path.clone())
+                            } else {
+                                None
+                            }
+                        })
+                } else {
+                    self.dual_panel.right().selected_indices.first()
+                        .and_then(|&idx| {
+                            let files = &self.dual_panel.right().files;
+                            if idx < files.len() && files[idx].is_dir {
+                                Some(files[idx].path.clone())
+                            } else {
+                                None
+                            }
+                        })
+                };
+                if let Some(path) = file_path {
+                    self.navigate_to(active_panel, &path);
+                }
+            }
             _ => {}
         }
     }
@@ -663,10 +760,20 @@ impl App {
 
                     log::info!("click: panel={} file_area_y={:.0} file_area_h={:.0} mouse=({:.0},{:.0})", panel_idx, file_area_y, file_area_h, self.mouse_x, self.mouse_y);
 
-                    if self.mouse_y >= file_area_y && self.mouse_y < file_area_y + file_area_h {
-                        let panel_snapshot = if panel_idx == 0 { self.dual_panel.left() } else { self.dual_panel.right() };
-                        let file_count = panel_snapshot.files.len();
-                        let scroll_y = self.virtual_scroll[panel_idx.min(3)].scroll_offset();
+if self.mouse_y >= file_area_y && self.mouse_y < file_area_y + file_area_h {
+                        // 先获取需要的数据，避免借用冲突
+                        let (file_count, scroll_y, file_path, file_is_dir) = {
+                            let panel_snapshot = if panel_idx == 0 { self.dual_panel.left() } else { self.dual_panel.right() };
+                            let file_count = panel_snapshot.files.len();
+                            let scroll_y = self.virtual_scroll[panel_idx.min(3)].scroll_offset();
+                            let row_idx = ((self.mouse_y - file_area_y + scroll_y) / row_h) as usize;
+                            let (fp, fid) = if row_idx < file_count {
+                                (panel_snapshot.files[row_idx].path.clone(), panel_snapshot.files[row_idx].is_dir)
+                            } else {
+                                (String::new(), false)
+                            };
+                            (file_count, scroll_y, fp, fid)
+                        };
                         let row_idx = ((self.mouse_y - file_area_y + scroll_y) / row_h) as usize;
 
                         log::info!("click: row_idx={} file_count={} scroll_y={:.0}", row_idx, file_count, scroll_y);
@@ -693,6 +800,19 @@ impl App {
                                 panel.selected_indices.push(row_idx);
                             }
                             log::info!("click: AFTER  selection={:?}", panel.selected_indices);
+
+                            // 双击检测: 同一行 + 300ms 内 → 导航进入文件夹
+                            let now = std::time::Instant::now();
+                            let is_double_click = row_idx == self.last_click_idx
+                                && panel_idx == self.last_click_panel
+                                && now.duration_since(self.last_click_time).as_millis() < 300;
+                            self.last_click_time = now;
+                            self.last_click_panel = panel_idx;
+                            self.last_click_idx = row_idx;
+
+                            if is_double_click && file_is_dir && !file_path.is_empty() {
+                                self.navigate_to(panel_idx, &file_path);
+                            }
                         }
                         break;
                     }
@@ -962,12 +1082,20 @@ impl App {
                     gpu.draw_rect_simple(&mut encoder, &view, panel_x, panel_y, panel_w, breadcrumb_h, bg_base, sw, sh);
                     gpu.draw_rect_simple(&mut encoder, &view, panel_x, panel_y + breadcrumb_h - 1.0, panel_w, 1.0, border, sw, sh);
 
-                    // Breadcrumb items (different for each panel)
-                    let crumbs = match panel_idx {
-                        0 => vec!["D:", "work_space", "personal_workspace", "src"],
-                        1 => vec!["D:", "work_space", "personal_workspace", "target"],
-                        _ => vec!["E:", "backup", "2026"],
+                    // Breadcrumb items (从当前面板路径生成)
+                    let panel_path = if panel_idx == 0 {
+                        self.dual_panel.left().path.clone()
+                    } else {
+                        self.dual_panel.right().path.clone()
                     };
+                    let path_components: Vec<std::path::Component> = std::path::Path::new(&panel_path)
+                        .components()
+                        .collect();
+                    let crumbs: Vec<String> = path_components
+                        .iter()
+                        .map(|c| c.as_os_str().to_string_lossy().to_string())
+                        .filter(|s| !s.is_empty())
+                        .collect();
                     let mut cx = panel_x + 12.0;
                     for (i, crumb) in crumbs.iter().enumerate() {
                         let color = if i == crumbs.len() - 1 { text_primary } else { text_secondary };
@@ -1218,7 +1346,15 @@ impl App {
                         }
                         let date_x = col_date - scroll_x;
                         if date_x + 100.0 > panel_x && date_x < panel_right {
-                            gpu.draw_text_simple_with_scissor(&mut encoder, &view, "2026-08-31", date_x, Self::text_y_centered(gpu, ry, row_h), sub_color, sw, sh, (scissor_x, scissor_y, scissor_w, scissor_h));
+                            // 格式化修改时间: YYYY-MM-DD HH:MM
+                            let date_str = if file.modified > 0 {
+                                let dt = chrono::DateTime::from_timestamp(file.modified as i64, 0)
+                                    .unwrap_or_default();
+                                dt.format("%Y-%m-%d %H:%M").to_string()
+                            } else {
+                                String::new()
+                            };
+                            gpu.draw_text_simple_with_scissor(&mut encoder, &view, &date_str, date_x, Self::text_y_centered(gpu, ry, row_h), sub_color, sw, sh, (scissor_x, scissor_y, scissor_w, scissor_h));
                         }
                     }
 
