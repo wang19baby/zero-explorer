@@ -1464,7 +1464,10 @@ impl GpuContext {
             let saved_font_renderer = self.font_renderer.take();
             self.font_renderer = self.icon_font_renderer.take();
             
-            self.draw_text_simple_with_scissor(encoder, view, &icon_str, text_x, text_y, icon_color, screen_width, screen_height, scissor_rect.expect("scissor_rect should be Some"));
+            match scissor_rect {
+                Some(rect) => self.draw_text_simple_with_scissor(encoder, view, &icon_str, text_x, text_y, icon_color, screen_width, screen_height, rect),
+                None => self.draw_text_simple(encoder, view, &icon_str, text_x, text_y, icon_color, screen_width, screen_height),
+            }
             
             self.icon_font_renderer = self.font_renderer.take();
             self.font_renderer = saved_font_renderer;
