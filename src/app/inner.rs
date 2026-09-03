@@ -59,6 +59,16 @@ pub struct App {
     path_input_active: [bool; 2],     // 每个面板的路径输入是否激活
     path_input_text: [String; 2],     // 输入框中的文本
     path_input_cursor: [usize; 2],    // 光标位置
+    // 标签页状态
+    panel_tabs: [Vec<TabInfo>; 2],    // 每个面板的标签页列表
+    active_tab_idx: [usize; 2],       // 每个面板的活跃标签索引
+    tab_close_confirm: Option<(usize, usize)>, // (panel_idx, tab_idx) 确认关闭对话框
+}
+
+#[derive(Debug, Clone)]
+struct TabInfo {
+    name: String,
+    path: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -220,6 +230,9 @@ impl App {
             path_input_active: [false; 2],
             path_input_text: [String::new(), String::new()],
             path_input_cursor: [0; 2],
+            panel_tabs: [vec![], vec![]],
+            active_tab_idx: [0; 2],
+            tab_close_confirm: None,
         };
 
         // 初始化左面板文件数据 - 从磁盘读取
@@ -271,6 +284,16 @@ impl App {
             sort_descending: false,
             view_mode: ViewMode::Details,
         });
+
+        // 初始化标签页
+        app.panel_tabs[0] = vec![TabInfo {
+            name: "src".to_string(),
+            path: left_path.to_string_lossy().to_string(),
+        }];
+        app.panel_tabs[1] = vec![TabInfo {
+            name: "target".to_string(),
+            path: right_path.to_string_lossy().to_string(),
+        }];
 
         app
     }
@@ -629,6 +652,7 @@ impl App {
                 self.preview_visible = false;
                 self.search_visible = false;
                 self.vim_help_visible = false;
+                self.tab_close_confirm = None;
             }
             Key::Named(NamedKey::Tab) => {
                 // Tab键切换面板焦点
@@ -695,6 +719,53 @@ impl App {
         let sh = self.window.as_ref().unwrap().inner_size().height as f32;
         let status_h = 30.0f32;
         let status_y = sh - status_h;
+
+        // Tab close confirmation dialog
+        if let Some((panel_idx, tab_idx)) = self.tab_close_confirm {
+            let dialog_w = 320.0;
+            let dialog_h = 140.0;
+            let dialog_x = (sw - dialog_w) / 2.0;
+            let dialog_y = (sh - dialog_h) / 2.0;
+
+            let cancel_x = dialog_x + dialog_w - 180.0;
+            let cancel_y = dialog_y + dialog_h - 44.0;
+            let btn_w = 76.0;
+            let btn_h = 32.0;
+
+            // 取消按钮
+            if self.mouse_x >= cancel_x && self.mouse_x < cancel_x + btn_w
+                && self.mouse_y >= cancel_y && self.mouse_y < cancel_y + btn_h {
+                self.tab_close_confirm = None;
+                return;
+            }
+
+            // 确定按钮
+            let confirm_x = dialog_x + dialog_w - 92.0;
+            if self.mouse_x >= confirm_x && self.mouse_x < confirm_x + btn_w
+                && self.mouse_y >= cancel_y && self.mouse_y < cancel_y + btn_h {
+                // 关闭标签
+                if self.panel_tabs[panel_idx].len() > 1 {
+                    self.panel_tabs[panel_idx].remove(tab_idx);
+                    // 调整活跃标签索引
+                    if self.active_tab_idx[panel_idx] >= self.panel_tabs[panel_idx].len() {
+                        self.active_tab_idx[panel_idx] = self.panel_tabs[panel_idx].len() - 1;
+                    }
+                    // 导航到新活跃标签的路径
+                    let tab_path = self.panel_tabs[panel_idx][self.active_tab_idx[panel_idx]].path.clone();
+                    self.navigate_to(panel_idx, &tab_path);
+                }
+                self.tab_close_confirm = None;
+                return;
+            }
+
+            // 点击对话框外部取消
+            if !(self.mouse_x >= dialog_x && self.mouse_x < dialog_x + dialog_w
+                && self.mouse_y >= dialog_y && self.mouse_y < dialog_y + dialog_h) {
+                self.tab_close_confirm = None;
+                return;
+            }
+            return;
+        }
 
         // Status bar click area: y > status_y
         if self.mouse_y > status_y {
@@ -926,6 +997,127 @@ for (i, _crumb) in crumbs.iter().enumerate() {
                                 }
                                 cx += total_w;
                             }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+
+        // Tab bar click handling
+        if self.panel_mode == PanelMode::Panels {
+            let breadcrumb_h = 36.0f32;
+            let tab_h = 32.0f32;
+            let status_h = 30.0f32;
+            let divider_w = 4.0f32;
+
+            let (main_x, main_w) = if self.sidebar_visible {
+                match self.sidebar_position {
+                    SidebarPosition::Left => (self.sidebar_width + 1.0, sw - self.sidebar_width - 1.0),
+                    SidebarPosition::Right => (0.0, sw - self.sidebar_width - 1.0),
+                }
+            } else {
+                (0.0, sw)
+            };
+
+            let panel_count = match self.layout_type {
+                LayoutType::Single => 1,
+                LayoutType::LeftRight | LayoutType::TopBottom => 2,
+                LayoutType::LeftMidRight | LayoutType::Top2Bottom1 | LayoutType::Top1Bottom2 => 3,
+                LayoutType::FourGrid => 4,
+            };
+
+            for panel_idx in 0..panel_count {
+                let (px, py, pw, _ph) = match self.layout_type {
+                    LayoutType::Single => (main_x, 0.0, main_w, sh - status_h),
+                    LayoutType::LeftRight => {
+                        let pw = (main_w - divider_w) / 2.0;
+                        if panel_idx == 0 { (main_x, 0.0, pw, sh - status_h) } else { (main_x + pw + divider_w, 0.0, pw, sh - status_h) }
+                    }
+                    LayoutType::TopBottom => {
+                        let ph = (sh - status_h - divider_w) / 2.0;
+                        if panel_idx == 0 { (main_x, 0.0, main_w, ph) } else { (main_x, ph + divider_w, main_w, ph) }
+                    }
+                    LayoutType::LeftMidRight => {
+                        let pw = (main_w - divider_w * 2.0) / 3.0;
+                        match panel_idx {
+                            0 => (main_x, 0.0, pw, sh - status_h),
+                            1 => (main_x + pw + divider_w, 0.0, pw, sh - status_h),
+                            _ => (main_x + (pw + divider_w) * 2.0, 0.0, pw, sh - status_h),
+                        }
+                    }
+                    _ => (main_x, 0.0, main_w, sh - status_h),
+                };
+
+                let tab_y = py + breadcrumb_h;
+
+                // 检查是否点击了标签栏区域
+                if self.mouse_y >= tab_y && self.mouse_y < tab_y + tab_h
+                    && self.mouse_x >= px && self.mouse_x < px + pw {
+
+                    let now = std::time::Instant::now();
+                    let is_double_click = panel_idx == self.last_click_panel
+                        && now.duration_since(self.last_click_time).as_millis() < 300;
+                    self.last_click_time = now;
+                    self.last_click_panel = panel_idx;
+
+                    if is_double_click {
+                        // 双击标签栏：检查是否点击了某个标签
+                        let tabs = &self.panel_tabs[panel_idx];
+                        let mut tx = px + 4.0;
+                        let mut clicked_tab_idx = None;
+
+                        for (i, _tab) in tabs.iter().enumerate() {
+                            let tab_w = 80.0; // 估算宽度
+                            if self.mouse_x >= tx && self.mouse_x < tx + tab_w {
+                                clicked_tab_idx = Some(i);
+                                break;
+                            }
+                            tx += tab_w + 1.0;
+                        }
+
+                        if let Some(tab_idx) = clicked_tab_idx {
+                            // 双击标签：弹出确认关闭对话框
+                            if self.panel_tabs[panel_idx].len() > 1 {
+                                self.tab_close_confirm = Some((panel_idx, tab_idx));
+                            }
+                        } else {
+                            // 双击空白处：创建新标签
+                            let current_path = if panel_idx == 0 {
+                                self.dual_panel.left().path.clone()
+                            } else {
+                                self.dual_panel.right().path.clone()
+                            };
+                            let dir_name = std::path::Path::new(&current_path)
+                                .file_name()
+                                .map(|n| n.to_string_lossy().to_string())
+                                .unwrap_or_else(|| "New Tab".to_string());
+                            self.panel_tabs[panel_idx].push(TabInfo {
+                                name: dir_name,
+                                path: current_path,
+                            });
+                            self.active_tab_idx[panel_idx] = self.panel_tabs[panel_idx].len() - 1;
+                        }
+                    } else {
+                        // 单击标签：切换到该标签
+                        let tabs = &self.panel_tabs[panel_idx];
+                        let mut tx = px + 4.0;
+                        let mut clicked_tab_idx = None;
+
+                        for (i, _tab) in tabs.iter().enumerate() {
+                            let tab_w = 80.0; // 估算宽度
+                            if self.mouse_x >= tx && self.mouse_x < tx + tab_w {
+                                clicked_tab_idx = Some(i);
+                                break;
+                            }
+                            tx += tab_w + 1.0;
+                        }
+
+                        if let Some(tab_idx) = clicked_tab_idx {
+                            self.active_tab_idx[panel_idx] = tab_idx;
+                            // 导航到标签对应的路径
+                            let tab_path = self.panel_tabs[panel_idx][tab_idx].path.clone();
+                            self.navigate_to(panel_idx, &tab_path);
                         }
                     }
                     break;
@@ -1382,18 +1574,28 @@ let colors = gpu.theme_colors();
                     gpu.draw_rect_simple(&mut encoder, &view, panel_x, tab_y, panel_w, tab_h, bg_tertiary, sw, sh);
                     gpu.draw_rect_simple(&mut encoder, &view, panel_x, tab_y + tab_h - 1.0, panel_w, 1.0, border, sw, sh);
 
-                    // Tabs (使用当前目录名)
-                    let current_tab_name = if panel_idx == 0 { &left_name } else { &right_name };
-                    let tabs = vec![current_tab_name.as_str()];
+                    // Tabs (使用panel_tabs)
+                    let tabs = &self.panel_tabs[panel_idx];
+                    let active_tab = self.active_tab_idx[panel_idx];
                     let mut tx = panel_x + 4.0;
-                    for (i, tab_name) in tabs.iter().enumerate() {
-                        let tab_w = gpu.measure_text(tab_name) + 24.0;
-                        let tab_color = if i == 0 { bg_base } else { bg_tertiary };
-                        gpu.draw_rect_simple(&mut encoder, &view, tx, tab_y + 2.0, tab_w, tab_h - 2.0, tab_color, sw, sh);
-                        if i == 0 {
+                    for (i, tab) in tabs.iter().enumerate() {
+                        let tab_w = gpu.measure_text(&tab.name) + 24.0;
+                        let is_active = i == active_tab;
+                        let tab_color = if is_active { bg_base } else { bg_tertiary };
+
+                        // 检测hover
+                        let is_hover = self.mouse_x >= tx && self.mouse_x < tx + tab_w
+                            && self.mouse_y >= tab_y && self.mouse_y < tab_y + tab_h;
+
+                        // hover时显示背景
+                        let final_color = if is_hover && !is_active { bg_secondary } else { tab_color };
+                        gpu.draw_rect_simple(&mut encoder, &view, tx, tab_y + 2.0, tab_w, tab_h - 2.0, final_color, sw, sh);
+
+                        if is_active {
                             gpu.draw_rect_simple(&mut encoder, &view, tx, tab_y + 2.0, tab_w, 2.0, primary, sw, sh);
                         }
-                        gpu.draw_text_simple(&mut encoder, &view, tab_name, tx + 12.0, Self::text_y_centered(gpu, tab_y + 2.0, tab_h - 2.0), text_primary, sw, sh);
+
+                        gpu.draw_text_simple(&mut encoder, &view, &tab.name, tx + 12.0, Self::text_y_centered(gpu, tab_y + 2.0, tab_h - 2.0), text_primary, sw, sh);
                         tx += tab_w + 1.0;
                     }
 
@@ -2153,6 +2355,59 @@ let colors = gpu.theme_colors();
                     gpu.draw_rect_simple(&mut encoder, &view, help_x + 12.0, help_y + help_h - 40.0, help_w - 24.0, 32.0, [0.15, 0.15, 0.15, 1.0], sw, sh);
                     gpu.draw_rect_simple(&mut encoder, &view, help_x + 12.0, help_y + help_h - 40.0, help_w - 24.0, 32.0, [0.3, 0.3, 0.3, 1.0], sw, sh);
                     gpu.draw_text_simple(&mut encoder, &view, "按 ? 或 Esc 关闭帮助", help_x + 20.0, Self::text_y_centered(gpu, help_y + help_h - 40.0, 32.0), [0.6, 0.6, 0.6, 1.0], sw, sh);
+                }
+
+                // Tab close confirmation dialog
+                if let Some((panel_idx, tab_idx)) = self.tab_close_confirm {
+                    let dialog_w = 320.0;
+                    let dialog_h = 140.0;
+                    let dialog_x = (sw - dialog_w) / 2.0;
+                    let dialog_y = (sh - dialog_h) / 2.0;
+
+                    // 半透明背景
+                    gpu.draw_rect_simple(&mut encoder, &view, 0.0, 0.0, sw, sh, [0.0, 0.0, 0.0, 0.5], sw, sh);
+
+                    // 对话框背景
+                    gpu.draw_rect_simple(&mut encoder, &view, dialog_x, dialog_y, dialog_w, dialog_h, bg_secondary, sw, sh);
+                    gpu.draw_rect_simple(&mut encoder, &view, dialog_x, dialog_y, dialog_w, dialog_h, border, sw, sh);
+
+                    // 标题
+                    gpu.draw_text_simple(&mut encoder, &view, "关闭标签页", dialog_x + 16.0, dialog_y + 16.0, text_primary, sw, sh);
+
+                    // 内容
+                    let tab_name = if tab_idx < self.panel_tabs[panel_idx].len() {
+                        &self.panel_tabs[panel_idx][tab_idx].name
+                    } else {
+                        "Unknown"
+                    };
+                    gpu.draw_text_simple(&mut encoder, &view, &format!("确定关闭标签 \"{}\" ?", tab_name), dialog_x + 16.0, dialog_y + 48.0, text_secondary, sw, sh);
+
+                    // 取消按钮
+                    let cancel_x = dialog_x + dialog_w - 180.0;
+                    let cancel_y = dialog_y + dialog_h - 44.0;
+                    let cancel_w = 76.0;
+                    let cancel_h = 32.0;
+                    let cancel_bg = if self.mouse_x >= cancel_x && self.mouse_x < cancel_x + cancel_w
+                        && self.mouse_y >= cancel_y && self.mouse_y < cancel_y + cancel_h {
+                        bg_tertiary
+                    } else {
+                        bg_base
+                    };
+                    gpu.draw_rect_simple(&mut encoder, &view, cancel_x, cancel_y, cancel_w, cancel_h, cancel_bg, sw, sh);
+                    gpu.draw_rect_simple(&mut encoder, &view, cancel_x, cancel_y, cancel_w, cancel_h, border, sw, sh);
+                    gpu.draw_text_simple(&mut encoder, &view, "取消", cancel_x + 24.0, Self::text_y_centered(gpu, cancel_y, cancel_h), text_primary, sw, sh);
+
+                    // 确定按钮
+                    let confirm_x = dialog_x + dialog_w - 92.0;
+                    let confirm_bg = if self.mouse_x >= confirm_x && self.mouse_x < confirm_x + cancel_w
+                        && self.mouse_y >= cancel_y && self.mouse_y < cancel_y + cancel_h {
+                        [0.8, 0.2, 0.2, 1.0]
+                    } else {
+                        [0.7, 0.2, 0.2, 1.0]
+                    };
+                    gpu.draw_rect_simple(&mut encoder, &view, confirm_x, cancel_y, cancel_w, cancel_h, confirm_bg, sw, sh);
+                    gpu.draw_rect_simple(&mut encoder, &view, confirm_x, cancel_y, cancel_w, cancel_h, border, sw, sh);
+                    gpu.draw_text_simple(&mut encoder, &view, "关闭", confirm_x + 24.0, Self::text_y_centered(gpu, cancel_y, cancel_h), [1.0, 1.0, 1.0, 1.0], sw, sh);
                 }
 
                 gpu.queue.submit(std::iter::once(encoder.finish()));
