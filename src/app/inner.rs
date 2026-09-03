@@ -1154,6 +1154,12 @@ impl App {
                         let text_color = if is_selected { white } else { text_primary };
                         let sub_color = if is_selected { [0.8, 0.9, 1.0, 1.0] } else { text_secondary };
 
+                        // Scissor rect for file list content area (below header, within panel)
+                        let scissor_x = panel_x as u32;
+                        let scissor_y = (header_y + header_h) as u32;
+                        let scissor_w = panel_w as u32;
+                        let scissor_h = visible_h as u32;
+
                         // Get icon for this file (use FolderIconComposer for folders)
                         let file_icon = FileIcon::from_path(&file.name);
                         let icon_color = if file.is_dir {
@@ -1163,8 +1169,8 @@ impl App {
                             file_icon.icon_color()
                         };
 
-                        gpu.draw_rect_simple(&mut encoder, &view, panel_x, ry, panel_w, row_h, row_color, sw, sh);
-                        gpu.draw_rect_simple(&mut encoder, &view, panel_x, ry + row_h - 1.0, panel_w, 1.0, border, sw, sh);
+                        gpu.draw_rect_simple_with_scissor(&mut encoder, &view, panel_x, ry, panel_w, row_h, row_color, sw, sh, (scissor_x, scissor_y, scissor_w, scissor_h));
+                        gpu.draw_rect_simple_with_scissor(&mut encoder, &view, panel_x, ry + row_h - 1.0, panel_w, 1.0, border, sw, sh, (scissor_x, scissor_y, scissor_w, scissor_h));
 
                         let panel_right = panel_x + panel_w;
                         let icon_y = ry + (row_h - 24.0) / 2.0;
@@ -1184,35 +1190,35 @@ impl App {
                                     if let Some(atlas_pos) = gpu.atlas.upload_icon(
                                         &icon_key, 24, 24, &icon_pixels, &gpu.queue,
                                     ) {
-                                        gpu.draw_texture(&mut encoder, &view, &atlas_pos, icon_x, icon_y, 24.0, 24.0, sw, sh);
+                                        gpu.draw_texture_with_scissor(&mut encoder, &view, &atlas_pos, icon_x, icon_y, 24.0, 24.0, sw, sh, Some((scissor_x, scissor_y, scissor_w, scissor_h)));
                                     }
                                 } else if let Some(atlas_pos) = gpu.atlas.icon_positions.get(&icon_key).cloned() {
-                                    gpu.draw_texture(&mut encoder, &view, &atlas_pos, icon_x, icon_y, 24.0, 24.0, sw, sh);
+                                    gpu.draw_texture_with_scissor(&mut encoder, &view, &atlas_pos, icon_x, icon_y, 24.0, 24.0, sw, sh, Some((scissor_x, scissor_y, scissor_w, scissor_h)));
                                 }
                             }
                         } else {
                             // 普通文件: 尝试Shell图标或Nerd Font字符
-                            gpu.draw_file_icon(&mut encoder, &view, file_icon, icon_color, &file.path, icon_x, icon_y, 24.0, sw, sh);
+                            gpu.draw_file_icon_with_scissor(&mut encoder, &view, file_icon, icon_color, &file.path, icon_x, icon_y, 24.0, sw, sh, Some((scissor_x, scissor_y, scissor_w, scissor_h)));
                         }
                         }
                         // Simple clipping: only draw text if visible within panel
                         let name_x = col_name - scroll_x;
                         if name_x + 200.0 > panel_x && name_x < panel_right {
-                            gpu.draw_text_simple(&mut encoder, &view, &file.name, name_x, Self::text_y_centered(gpu, ry, row_h), text_color, sw, sh);
+                            gpu.draw_text_simple_with_scissor(&mut encoder, &view, &file.name, name_x, Self::text_y_centered(gpu, ry, row_h), text_color, sw, sh, (scissor_x, scissor_y, scissor_w, scissor_h));
                         }
                         let type_x = col_type - scroll_x;
                         if type_x + 120.0 > panel_x && type_x < panel_right {
-                            gpu.draw_text_simple(&mut encoder, &view, ftype, type_x, Self::text_y_centered(gpu, ry, row_h), sub_color, sw, sh);
+                            gpu.draw_text_simple_with_scissor(&mut encoder, &view, ftype, type_x, Self::text_y_centered(gpu, ry, row_h), sub_color, sw, sh, (scissor_x, scissor_y, scissor_w, scissor_h));
                         }
                         if !size_str.is_empty() {
                             let size_x = col_size - scroll_x;
                             if size_x + 80.0 > panel_x && size_x < panel_right {
-                                gpu.draw_text_simple(&mut encoder, &view, &size_str, size_x, Self::text_y_centered(gpu, ry, row_h), sub_color, sw, sh);
+                                gpu.draw_text_simple_with_scissor(&mut encoder, &view, &size_str, size_x, Self::text_y_centered(gpu, ry, row_h), sub_color, sw, sh, (scissor_x, scissor_y, scissor_w, scissor_h));
                             }
                         }
                         let date_x = col_date - scroll_x;
                         if date_x + 100.0 > panel_x && date_x < panel_right {
-                            gpu.draw_text_simple(&mut encoder, &view, "2026-08-31", date_x, Self::text_y_centered(gpu, ry, row_h), sub_color, sw, sh);
+                            gpu.draw_text_simple_with_scissor(&mut encoder, &view, "2026-08-31", date_x, Self::text_y_centered(gpu, ry, row_h), sub_color, sw, sh, (scissor_x, scissor_y, scissor_w, scissor_h));
                         }
                     }
 

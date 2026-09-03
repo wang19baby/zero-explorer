@@ -44,6 +44,7 @@ pub struct RectParams<'a> {
     pub color: [f32; 4],
     pub screen_width: f32,
     pub screen_height: f32,
+    pub scissor_rect: Option<(u32, u32, u32, u32)>,
 }
 
 pub struct TextParams<'a> {
@@ -55,6 +56,7 @@ pub struct TextParams<'a> {
     pub color: [f32; 4],
     pub screen_width: f32,
     pub screen_height: f32,
+    pub scissor_rect: Option<(u32, u32, u32, u32)>,
 }
 
 /// 纹理图集 - 管理字形和图标纹理
@@ -974,6 +976,10 @@ impl GpuContext {
             occlusion_query_set: None,
         });
 
+        if let Some((x, y, w, h)) = params.scissor_rect {
+            render_pass.set_scissor_rect(x, y, w, h);
+        }
+
         render_pass.set_pipeline(pipeline);
         render_pass.set_vertex_buffer(0, vertex_buffer.slice(..));
         render_pass.set_index_buffer(index_buffer.slice(..), wgpu::IndexFormat::Uint16);
@@ -1124,6 +1130,10 @@ impl GpuContext {
                 occlusion_query_set: None,
             });
 
+            if let Some((x, y, w, h)) = params.scissor_rect {
+                render_pass.set_scissor_rect(x, y, w, h);
+            }
+
             render_pass.set_pipeline(pipeline);
             if let Some(bind_group) = &self.atlas.bind_group {
                 render_pass.set_bind_group(0, bind_group, &[]);
@@ -1188,6 +1198,36 @@ impl GpuContext {
             color,
             screen_width,
             screen_height,
+            scissor_rect: None,
+        });
+    }
+
+    /// 绘制矩形 (带裁剪区域)
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_rect_simple_with_scissor(
+        &self,
+        encoder: &mut wgpu::CommandEncoder,
+        view: &wgpu::TextureView,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        color: [f32; 4],
+        screen_width: f32,
+        screen_height: f32,
+        scissor_rect: (u32, u32, u32, u32),
+    ) {
+        self.draw_rect(RectParams {
+            encoder,
+            view,
+            x,
+            y,
+            width,
+            height,
+            color,
+            screen_width,
+            screen_height,
+            scissor_rect: Some(scissor_rect),
         });
     }
 
@@ -1212,9 +1252,37 @@ impl GpuContext {
             color,
             screen_width,
             screen_height,
+            scissor_rect: None,
         });
     }
 
+    /// 绘制文本 (带裁剪区域)
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_text_simple_with_scissor(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        view: &wgpu::TextureView,
+        text: &str,
+        x: f32,
+        y: f32,
+        color: [f32; 4],
+        screen_width: f32,
+        screen_height: f32,
+        scissor_rect: (u32, u32, u32, u32),
+    ) {
+        self.draw_text(TextParams {
+            encoder,
+            view,
+            text,
+            x,
+            y,
+            color,
+            screen_width,
+            screen_height,
+            scissor_rect: Some(scissor_rect),
+        });
+}
+    
     /// 绘制纹理四边形 (用于图标渲染)
     #[allow(clippy::too_many_arguments)]
     pub fn draw_texture(
@@ -1228,6 +1296,24 @@ impl GpuContext {
         height: f32,
         screen_width: f32,
         screen_height: f32,
+    ) {
+        self.draw_texture_with_scissor(encoder, view, atlas_pos, x, y, width, height, screen_width, screen_height, None);
+    }
+
+    /// 绘制纹理四边形 (用于图标渲染，带裁剪区域)
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_texture_with_scissor(
+        &self,
+        encoder: &mut wgpu::CommandEncoder,
+        view: &wgpu::TextureView,
+        atlas_pos: &AtlasPosition,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        screen_width: f32,
+        screen_height: f32,
+        scissor_rect: Option<(u32, u32, u32, u32)>,
     ) {
         let pipeline = match &self.texture_pipeline {
             Some(p) => p,
@@ -1280,6 +1366,10 @@ impl GpuContext {
             occlusion_query_set: None,
         });
 
+        if let Some((x, y, w, h)) = scissor_rect {
+            render_pass.set_scissor_rect(x, y, w, h);
+        }
+
         render_pass.set_pipeline(pipeline);
         if let Some(bind_group) = &self.atlas.bind_group {
             render_pass.set_bind_group(0, bind_group, &[]);
@@ -1331,10 +1421,29 @@ impl GpuContext {
         screen_width: f32,
         screen_height: f32,
     ) {
+        self.draw_file_icon_with_scissor(encoder, view, icon, icon_color, path, x, y, icon_size, screen_width, screen_height, None);
+    }
+
+    /// 绘制文件图标 (带裁剪区域)
+    #[allow(clippy::too_many_arguments)]
+    pub fn draw_file_icon_with_scissor(
+        &mut self,
+        encoder: &mut wgpu::CommandEncoder,
+        view: &wgpu::TextureView,
+        icon: FileIcon,
+        icon_color: [f32; 4],
+        path: &str,
+        x: f32,
+        y: f32,
+        icon_size: f32,
+        screen_width: f32,
+        screen_height: f32,
+        scissor_rect: Option<(u32, u32, u32, u32)>,
+    ) {
         // 尝试从纹理图集获取Shell图标
         if let Some(atlas_pos) = self.atlas.icon_positions.get(path).cloned() {
             // 使用纹理渲染
-            self.draw_texture(
+            self.draw_texture_with_scissor(
                 encoder,
                 view,
                 &atlas_pos,
@@ -1344,6 +1453,7 @@ impl GpuContext {
                 icon_size,
                 screen_width,
                 screen_height,
+                scissor_rect,
             );
         } else {
             // 回退到Nerd Font字符渲染
@@ -1354,7 +1464,7 @@ impl GpuContext {
             let saved_font_renderer = self.font_renderer.take();
             self.font_renderer = self.icon_font_renderer.take();
             
-            self.draw_text_simple(encoder, view, &icon_str, text_x, text_y, icon_color, screen_width, screen_height);
+            self.draw_text_simple_with_scissor(encoder, view, &icon_str, text_x, text_y, icon_color, screen_width, screen_height, scissor_rect.expect("scissor_rect should be Some"));
             
             self.icon_font_renderer = self.font_renderer.take();
             self.font_renderer = saved_font_renderer;
