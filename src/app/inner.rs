@@ -63,6 +63,7 @@ pub struct App {
     panel_tabs: [Vec<TabInfo>; 2],    // 每个面板的标签页列表
     active_tab_idx: [usize; 2],       // 每个面板的活跃标签索引
     tab_close_confirm: Option<(usize, usize)>, // (panel_idx, tab_idx) 确认关闭对话框
+    tab_positions: [Vec<(f32, f32)>; 2], // 每个面板的标签位置 (x, width)
 }
 
 #[derive(Debug, Clone)]
@@ -233,6 +234,7 @@ impl App {
             panel_tabs: [vec![], vec![]],
             active_tab_idx: [0; 2],
             tab_close_confirm: None,
+            tab_positions: [vec![], vec![]],
         };
 
         // 初始化左面板文件数据 - 从磁盘读取
@@ -1063,17 +1065,14 @@ for (i, _crumb) in crumbs.iter().enumerate() {
 
                     if is_double_click {
                         // 双击标签栏：检查是否点击了某个标签
-                        let tabs = &self.panel_tabs[panel_idx];
-                        let mut tx = px + 4.0;
+                        let positions = &self.tab_positions[panel_idx];
                         let mut clicked_tab_idx = None;
 
-                        for (i, _tab) in tabs.iter().enumerate() {
-                            let tab_w = 80.0; // 估算宽度
-                            if self.mouse_x >= tx && self.mouse_x < tx + tab_w {
+                        for (i, (tx, tab_w)) in positions.iter().enumerate() {
+                            if self.mouse_x >= *tx && self.mouse_x < *tx + *tab_w {
                                 clicked_tab_idx = Some(i);
                                 break;
                             }
-                            tx += tab_w + 1.0;
                         }
 
                         if let Some(tab_idx) = clicked_tab_idx {
@@ -1100,17 +1099,14 @@ for (i, _crumb) in crumbs.iter().enumerate() {
                         }
                     } else {
                         // 单击标签：切换到该标签
-                        let tabs = &self.panel_tabs[panel_idx];
-                        let mut tx = px + 4.0;
+                        let positions = &self.tab_positions[panel_idx];
                         let mut clicked_tab_idx = None;
 
-                        for (i, _tab) in tabs.iter().enumerate() {
-                            let tab_w = 80.0; // 估算宽度
-                            if self.mouse_x >= tx && self.mouse_x < tx + tab_w {
+                        for (i, (tx, tab_w)) in positions.iter().enumerate() {
+                            if self.mouse_x >= *tx && self.mouse_x < *tx + *tab_w {
                                 clicked_tab_idx = Some(i);
                                 break;
                             }
-                            tx += tab_w + 1.0;
                         }
 
                         if let Some(tab_idx) = clicked_tab_idx {
@@ -1578,8 +1574,10 @@ let colors = gpu.theme_colors();
                     let tabs = &self.panel_tabs[panel_idx];
                     let active_tab = self.active_tab_idx[panel_idx];
                     let mut tx = panel_x + 4.0;
+                    let mut positions = Vec::new();
                     for (i, tab) in tabs.iter().enumerate() {
                         let tab_w = gpu.measure_text(&tab.name) + 24.0;
+                        positions.push((tx, tab_w));
                         let is_active = i == active_tab;
                         let tab_color = if is_active { bg_base } else { bg_tertiary };
 
@@ -1598,6 +1596,7 @@ let colors = gpu.theme_colors();
                         gpu.draw_text_simple(&mut encoder, &view, &tab.name, tx + 12.0, Self::text_y_centered(gpu, tab_y + 2.0, tab_h - 2.0), text_primary, sw, sh);
                         tx += tab_w + 1.0;
                     }
+                    self.tab_positions[panel_idx] = positions;
 
                     // View toggle buttons (right side of tab bar)
                     let view_toggle_x = panel_x + panel_w - 68.0;
